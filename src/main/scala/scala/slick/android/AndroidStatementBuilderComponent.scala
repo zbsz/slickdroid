@@ -319,7 +319,8 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
         b")"
         if(s.scalar) b += '}'
       case SimpleLiteral(w) => b += w
-      case s: SimpleExpression => throw new SlickException(s"SimpleExpression not yet supported on android: $s") //s.toSQL(this)
+      case s: SimpleAndroidExpression => s.toSQL(this)
+      case s: SimpleExpression => throw new SlickException("SimpleExpression is not supported, User SimpleAndroidExpression instead")
       case Library.Between(left, start, end) => b"$left between $start and $end"
       case Library.CountDistinct(e) => b"count(distinct $e)"
       case Library.Like(l, r) => b"\($l like $r\)"

@@ -4,6 +4,7 @@ import scala.slick.android.AndroidDriver.simple._
 import java.sql.{Timestamp, Time, Date}
 import scala.slick.lifted.ColumnBase
 
+
 /**
   */
 class ScalarFunctionsSpec extends AndroidBackendSpec {
@@ -15,7 +16,7 @@ class ScalarFunctionsSpec extends AndroidBackendSpec {
     checkLit(Time.valueOf("15:53:21"))
     checkLit(Timestamp.valueOf("2011-07-15 15:53:21"))
 
-    val myExpr = SimpleExpression.binary[Int, Int, Int] { (l, r, qb) =>
+    val myExpr = SimpleAndroidExpression.binary[Int, Int, Int] { (l, r, qb) =>
       qb.sqlBuilder += '('
       qb.expr(l)
       qb.sqlBuilder += '+'

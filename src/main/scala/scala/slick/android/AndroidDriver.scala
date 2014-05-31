@@ -5,6 +5,7 @@ import scala.slick.ast.{BaseTypedType, Node}
 import scala.slick.compiler.{InsertCompiler, Phase, QueryCompiler}
 import scala.slick.lifted.{ColumnBase, RunnableCompiled, Query}
 import scala.slick.jdbc.JdbcFastPath
+import scala.slick.lifted
 
 /** A profile for accessing SQL databases via JDBC. All drivers for JDBC-based databases
   * implement this profile. */
@@ -68,6 +69,9 @@ trait AndroidProfile extends SqlProfile with AndroidTableComponent
 
   trait SimpleQL extends super.SimpleQL with Implicits {
     type FastPath[T] = JdbcFastPath[T]
+
+    type SimpleAndroidExpression = lifted.SimpleAndroidExpression
+    val SimpleAndroidExpression = lifted.SimpleAndroidExpression
   }
 }
 
