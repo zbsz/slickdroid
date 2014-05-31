@@ -1,12 +1,10 @@
 package scala.slick.android
 
-import java.sql.{PreparedStatement, ResultSet}
 import scala.slick.compiler.{CompilerState, CodeGen}
 import scala.slick.ast._
 import scala.slick.relational._
-import scala.slick.lifted.MappedProjection
-import scala.slick.driver.JdbcDriver
-import scala.slick.util.SQLBuilder
+import android.database.Cursor
+import android.database.sqlite.SQLiteStatement
 
 /** JDBC driver component which contains the mapping compiler and insert compiler */
 trait AndroidMappingCompilerComponent { driver: AndroidDriver =>
@@ -15,32 +13,32 @@ trait AndroidMappingCompilerComponent { driver: AndroidDriver =>
   val mappingCompiler: MappingCompiler = new MappingCompiler
 
   /** Create a (possibly specialized) `ResultConverter` for the given `JdbcType`. */
-  def createBaseResultConverter[T](ti: JdbcType[T], name: String, idx: Int): ResultConverter[JdbcResultConverterDomain, T] =
-    SpecializedJdbcResultConverter.base(ti, name, idx)
+  def createBaseResultConverter[T](ti: AndroidType[T], name: String, idx: Int): ResultConverter[AndroidResultConverterDomain, T] =
+    SpecializedAndroidResultConverter.base(ti, name, idx)
 
   /** Create a (possibly specialized) `ResultConverter` for `Option` values of the given `JdbcType`. */
-  def createOptionResultConverter[T](ti: JdbcType[T], idx: Int): ResultConverter[JdbcResultConverterDomain, Option[T]] =
-    SpecializedJdbcResultConverter.option(ti, idx)
+  def createOptionResultConverter[T](ti: AndroidType[T], idx: Int): ResultConverter[AndroidResultConverterDomain, Option[T]] =
+    SpecializedAndroidResultConverter.option(ti, idx)
 
   /** A ResultConverterCompiler that builds JDBC-based converters. Instances of
     * this class use mutable state internally. They are meant to be used for a
     * single conversion only and must not be shared or reused. */
-  class MappingCompiler extends ResultConverterCompiler[JdbcResultConverterDomain] {
-    def createColumnConverter(n: Node, idx: Int, column: Option[FieldSymbol]): ResultConverter[JdbcResultConverterDomain, _] = {
-      val JdbcType(ti, option) = n.nodeType.structural
+  class MappingCompiler extends ResultConverterCompiler[AndroidResultConverterDomain] {
+    def createColumnConverter(n: Node, idx: Int, column: Option[FieldSymbol]): ResultConverter[AndroidResultConverterDomain, _] = {
+      val AndroidType(ti, option) = n.nodeType.structural
       if(option) createOptionResultConverter(ti, idx)
       else createBaseResultConverter(ti, column.fold(n.toString)(_.name), idx)
     }
 
-    override def createGetOrElseResultConverter[T](rc: ResultConverter[JdbcResultConverterDomain, Option[T]], default: () => T) = rc match {
+    override def createGetOrElseResultConverter[T](rc: ResultConverter[AndroidResultConverterDomain, Option[T]], default: () => T) = rc match {
       case rc: OptionResultConverter[_] => rc.getOrElse(default)
       case _ => super.createGetOrElseResultConverter[T](rc, default)
     }
 
-    override def createTypeMappingResultConverter(rc: ResultConverter[JdbcResultConverterDomain, Any], mapper: MappedScalaType.Mapper) = {
+    override def createTypeMappingResultConverter(rc: ResultConverter[AndroidResultConverterDomain, Any], mapper: MappedScalaType.Mapper) = {
       val tm = new TypeMappingResultConverter(rc, mapper.toBase, mapper.toMapped)
       mapper.fastPath match {
-        case Some(pf) => pf.orElse[Any, Any] { case x => x }.apply(tm).asInstanceOf[ResultConverter[JdbcResultConverterDomain, Any]]
+        case Some(pf) => pf.orElse[Any, Any] { case x => x }.apply(tm).asInstanceOf[ResultConverter[AndroidResultConverterDomain, Any]]
         case None => tm
       }
     }
@@ -63,17 +61,17 @@ trait AndroidMappingCompilerComponent { driver: AndroidDriver =>
     }
   }
 
-  class JdbcFastPathExtensionMethods[T, P](val mp: MappedProjection[T, P]) {
-    def fastPath(fpf: (TypeMappingResultConverter[JdbcResultConverterDomain, T, _] => JdbcFastPath[T])): MappedProjection[T, P] = mp.genericFastPath {
-      case tm @ TypeMappingResultConverter(_: ProductResultConverter[_, _], _, _) =>
-        fpf(tm.asInstanceOf[TypeMappingResultConverter[JdbcResultConverterDomain, T, _]])
-
-    }
-  }
+//  class JdbcFastPathExtensionMethods[T, P](val mp: MappedProjection[T, P]) {
+//    def fastPath(fpf: (TypeMappingResultConverter[AndroidResultConverterDomain, T, _] => JdbcFastPath[T])): MappedProjection[T, P] = mp.genericFastPath {
+//      case tm @ TypeMappingResultConverter(_: ProductResultConverter[_, _], _, _) =>
+//        fpf(tm.asInstanceOf[TypeMappingResultConverter[AndroidResultConverterDomain, T, _]])
+//
+//    }
+//  }
 }
 
-trait JdbcResultConverterDomain extends ResultConverterDomain {
-  type Reader = ResultSet
-  type Writer = PreparedStatement
-  type Updater = ResultSet
+trait AndroidResultConverterDomain extends ResultConverterDomain {
+  type Reader = Cursor
+  type Writer = SQLiteStatement
+  type Updater = Unit // android sqlite doesn't support updates on cursor
 }

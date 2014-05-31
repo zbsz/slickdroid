@@ -8,13 +8,10 @@ import scala.slick.ast.Util.nodeToNodeOps
 import scala.slick.ast.TypeUtil._
 import scala.slick.ast.ExtraUtil._
 import scala.slick.compiler.{RewriteBooleans, CodeGen, Phase, CompilerState, QueryCompiler}
-import scala.slick.util._
 import scala.slick.util.MacroSupport.macroSupportInterpolation
 import scala.slick.lifted._
 import scala.slick.profile.RelationalProfile
 import scala.slick.relational.{ResultConverter, CompiledMapping}
-import scala.slick.jdbc.JdbcResultConverterDomain
-import scala.slick.util.SQLBuilder.Result
 
 trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
 
@@ -29,7 +26,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
   def createSequenceDDLBuilder(seq: Sequence[_]): SequenceDDLBuilder = new SequenceDDLBuilder(seq)
 
   class JdbcCompiledInsert(source: Node) {
-    class Artifacts(val compiled: Node, val converter: ResultConverter[JdbcResultConverterDomain, Any], val ibr: InsertBuilderResult) {
+    class Artifacts(val compiled: Node, val converter: ResultConverter[AndroidResultConverterDomain, Any], val ibr: InsertBuilderResult) {
       def table: TableNode = ibr.table
       def sql: String = ibr.sql
       def fields: IndexedSeq[FieldSymbol] = ibr.fields
@@ -38,7 +35,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     protected[this] def compile(compiler: QueryCompiler): Artifacts = {
       val compiled = compiler.run(source).tree
       val ResultSetMapping(_, CompiledStatement(sql, ibr: InsertBuilderResult, _), CompiledMapping(conv, _)) = compiled
-      new Artifacts(compiled, conv.asInstanceOf[ResultConverter[JdbcResultConverterDomain, Any]], ibr)
+      new Artifacts(compiled, conv.asInstanceOf[ResultConverter[AndroidResultConverterDomain, Any]], ibr)
     }
 
     /** The compiled artifacts for standard insert statements. */
@@ -57,14 +54,14 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     lazy val updateInsert = compile(updateInsertCompiler)
 
     /** Build a list of columns and a matching `ResultConverter` for retrieving keys of inserted rows. */
-    def buildReturnColumns(node: Node): (IndexedSeq[String], ResultConverter[JdbcResultConverterDomain, _], Boolean) = {
+    def buildReturnColumns(node: Node): (IndexedSeq[String], ResultConverter[AndroidResultConverterDomain, _], Boolean) = {
       val ResultSetMapping(_, CompiledStatement(_, ibr: InsertBuilderResult, _), CompiledMapping(rconv, _)) = forceInsertCompiler.run(node).tree
       if(ibr.table.baseIdentity != standardInsert.table.baseIdentity)
         throw new SlickException("Returned key columns must be from same table as inserted columns ("+
           ibr.table.baseIdentity+" != "+standardInsert.table.baseIdentity+")")
       val returnOther = ibr.fields.size > 1 || !ibr.fields.head.options.contains(ColumnOption.AutoInc)
       if(returnOther) throw new SlickException("This DBMS allows only a single AutoInc column to be returned from an INSERT")
-      (ibr.fields.map(_.name), rconv.asInstanceOf[ResultConverter[JdbcResultConverterDomain, _]], returnOther)
+      (ibr.fields.map(_.name), rconv.asInstanceOf[ResultConverter[AndroidResultConverterDomain, _]], returnOther)
     }
   }
 

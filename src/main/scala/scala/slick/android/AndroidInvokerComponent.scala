@@ -1,12 +1,11 @@
 package scala.slick.android
 
 import scala.language.{higherKinds, existentials}
-import java.sql.PreparedStatement
 import scala.slick.ast.{CompiledStatement, ResultSetMapping, Node, ParameterSwitch}
 import scala.slick.jdbc._
-import scala.slick.util.SQLBuilder
 import scala.slick.profile.BasicInvokerComponent
 import scala.slick.relational.{ResultConverter, CompiledMapping}
+import android.database.sqlite.SQLiteStatement
 
 trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriver =>
 
@@ -28,7 +27,7 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
     override protected val previousAfterDelete = invokerPreviousAfterDelete
 
     protected[this] val ResultSetMapping(_, compiled, CompiledMapping(_converter, _)) = tree
-    protected[this] val converter = _converter.asInstanceOf[ResultConverter[JdbcResultConverterDomain, R]]
+    protected[this] val converter = _converter.asInstanceOf[ResultConverter[AndroidResultConverterDomain, R]]
     protected[this] val CompiledStatement(_, sres: SQLBuilder.Result, _) = findCompiledStatement(compiled)
 
     protected[this] def findCompiledStatement(n: Node): CompiledStatement = n match {
@@ -38,7 +37,7 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
     }
 
     protected def getStatement = sres.sql
-    protected def setParam(st: PreparedStatement): Unit = sres.setter(st, 1, param)
+    protected def setParam(st: SQLiteStatement): Unit = sres.setter(st, 1, param)
     protected def extractValue(pr: PositionedResult): R = converter.read(pr.rs)
     protected def updateRowValues(pr: PositionedResult, value: R) = converter.update(value, pr.rs)
     def invoker: this.type = this
@@ -64,7 +63,7 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
 
     def delete(implicit session: Backend#Session): Int = session.withPreparedStatement(deleteStatement) { st =>
       sres.setter(st, 1, param)
-      st.executeUpdate
+      st.executeUpdateDelete()
     }
 
     def deleteInvoker: this.type = this
@@ -72,20 +71,18 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
 
   /** Pseudo-invoker for running UPDATE calls. */
   class UpdateInvoker[T](protected val tree: Node, param: Any) {
-    protected[this] val ResultSetMapping(_,
-    CompiledStatement(_, sres: SQLBuilder.Result, _),
-    CompiledMapping(_converter, _)) = tree
-    protected[this] val converter = _converter.asInstanceOf[ResultConverter[JdbcResultConverterDomain, T]]
+    protected[this] val ResultSetMapping(_, CompiledStatement(_, sres: SQLBuilder.Result, _), CompiledMapping(_converter, _)) = tree
+    protected[this] val converter = _converter.asInstanceOf[ResultConverter[AndroidResultConverterDomain, T]]
 
     def updateStatement = getStatement
 
     protected def getStatement = sres.sql
 
     def update(value: T)(implicit session: Backend#Session): Int = session.withPreparedStatement(updateStatement) { st =>
-      st.clearParameters
+      st.clearBindings()
       converter.set(value, st)
       sres.setter(st, converter.width+1, param)
-      st.executeUpdate
+      st.executeUpdateDelete()
     }
 
     def updateInvoker: this.type = this
