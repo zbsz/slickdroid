@@ -15,7 +15,7 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
   def createDDLInvoker(ddl: SchemaDescription) = new DDLInvoker(ddl)
 
   /** An Invoker for queries. */
-  class QueryInvoker[R](tree: Node, param: Any) extends StatementInvoker[R] {
+  class QueryInvoker[R](tree: Node, param: Any) extends StatementInvoker[R] { self =>
 
     protected[this] val ResultSetMapping(_, compiled, CompiledMapping(_converter, _)) = tree
     protected[this] val converter = _converter.asInstanceOf[ResultConverter[AndroidResultConverterDomain, R]]
@@ -27,10 +27,30 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
         findCompiledStatement(cases.find { case (f, n) => f(param) }.map(_._2).getOrElse(default))
     }
 
+    /** Invoke the statement and return the raw results. */
+    override def results(maxRows: Int)(implicit session: AndroidBackend#Session): Either[Int, PositionedResultIterator[R]] = {
+      val statement = getStatement
+      val st = session.prepareStatement(statement)
+      setParam(st)
+      var doClose = true
+      try {
+        val pr = new PositionedResult(session.db.rawQuery(statement, Array())) {
+          override def close() = {
+            super.close()
+            st.close()
+          }
+        }
+        val rs = new PositionedResultIterator[R](pr, maxRows) {
+          def extractValue(pr: PositionedResult) = self.extractValue(pr)
+        }
+        doClose = false
+        Right(rs)
+      } finally if(doClose) st.close()
+    }
+
     protected def getStatement = sres.sql
     protected def setParam(st: SQLiteStatement): Unit = sres.setter(st, 1, param)
     protected def extractValue(pr: PositionedResult): R = converter.read(pr.rs)
-    protected def updateRowValues(pr: PositionedResult, value: R) = converter.update(value, pr.rs)
     def invoker: this.type = this
   }
 
