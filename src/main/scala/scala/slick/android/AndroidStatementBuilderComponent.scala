@@ -58,16 +58,12 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
 
     /** Build a list of columns and a matching `ResultConverter` for retrieving keys of inserted rows. */
     def buildReturnColumns(node: Node): (IndexedSeq[String], ResultConverter[JdbcResultConverterDomain, _], Boolean) = {
-      if(!capabilities.contains(JdbcProfile.capabilities.returnInsertKey))
-        throw new SlickException("This DBMS does not allow returning columns from INSERT statements")
-      val ResultSetMapping(_, CompiledStatement(_, ibr: InsertBuilderResult, _), CompiledMapping(rconv, _)) =
-        forceInsertCompiler.run(node).tree
+      val ResultSetMapping(_, CompiledStatement(_, ibr: InsertBuilderResult, _), CompiledMapping(rconv, _)) = forceInsertCompiler.run(node).tree
       if(ibr.table.baseIdentity != standardInsert.table.baseIdentity)
         throw new SlickException("Returned key columns must be from same table as inserted columns ("+
           ibr.table.baseIdentity+" != "+standardInsert.table.baseIdentity+")")
       val returnOther = ibr.fields.size > 1 || !ibr.fields.head.options.contains(ColumnOption.AutoInc)
-      if(!capabilities.contains(JdbcProfile.capabilities.returnInsertOther) && returnOther)
-        throw new SlickException("This DBMS allows only a single AutoInc column to be returned from an INSERT")
+      if(returnOther) throw new SlickException("This DBMS allows only a single AutoInc column to be returned from an INSERT")
       (ibr.fields.map(_.name), rconv.asInstanceOf[ResultConverter[JdbcResultConverterDomain, _]], returnOther)
     }
   }
@@ -80,7 +76,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
 
   /** Create a SQL representation of a literal value. */
   def valueToSQLLiteral(v: Any, tpe: Type): String = {
-    val JdbcType(ti, option) = tpe
+    val AndroidType(ti, option) = tpe
     if(option) v.asInstanceOf[Option[Any]].fold("null")(ti.valueToSQLLiteral)
     else ti.valueToSQLLiteral(v)
   }
@@ -94,10 +90,10 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
   class QueryBuilder(val tree: Node, val state: CompilerState) { queryBuilder =>
 
     // Immutable config options (to be overridden by subclasses)
-    protected val supportsTuples = true
+    protected val supportsTuples = false
     protected val supportsCast = true
     protected val supportsEmptyJoinConditions = true
-    protected val concatOperator: Option[String] = None
+    protected val concatOperator = Some("||")
     protected val hasPiFunction = true
     protected val hasRadDegConversion = true
     protected val pi = "3.1415926535897932384626433832795"
@@ -207,14 +203,11 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
       }
     }
 
-    protected def buildFetchOffsetClause(fetch: Option[Node], offset: Option[Node]) = building(OtherPart) {
-      (fetch, offset) match {
-        /* SQL:2008 syntax */
-        case (Some(t), Some(d)) => b" offset $d row fetch next $t row only"
-        case (Some(t), None) => b" fetch next $t row only"
-        case (None, Some(d)) => b" offset $d row"
-        case _ =>
-      }
+    protected def buildFetchOffsetClause(fetch: Option[Node], offset: Option[Node]) = (fetch, offset) match {
+      case (Some(t), Some(d)) => b" limit $d,$t"
+      case (Some(t), None   ) => b" limit $t"
+      case (None,    Some(d)) => b" limit $d,-1"
+      case _ =>
     }
 
     protected def buildSelectPart(n: Node): Unit = n match {
@@ -257,12 +250,33 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     }
 
     def expr(n: Node, skipParens: Boolean = false): Unit = n match {
-      case (n @ LiteralNode(v)) :@ JdbcType(ti, option) =>
+      case Library.UCase(ch) => b"upper(!$ch)"
+      case Library.LCase(ch) => b"lower(!$ch)"
+      case Library.%(l, r) => b"\($l%$r\)"
+      case Library.Ceiling(ch) => b"round($ch+0.5)"
+      case Library.Floor(ch) => b"round($ch-0.5)"
+      case Library.User() => b"''"
+      case Library.Database() => b"''"
+      case Apply(j: Library.JdbcFunction, ch) if j != Library.Concat =>
+        /* The SQLite JDBC driver does not support ODBC {fn ...} escapes, so we try
+         * unescaped function calls by default */
+        b"${j.name}("
+        b.sep(ch, ",")(expr(_, true))
+        b")"
+      case s: SimpleFunction if s.scalar =>
+        /* The SQLite JDBC driver does not support ODBC {fn ...} escapes, so we try
+         * unescaped function calls by default */
+        b"${s.name}("
+        b.sep(s.nodeChildren, ",")(expr(_, true))
+        b")"
+      case RowNumber(_) => throw new SlickException("SQLite does not support row numbers")
+
+      case (n @ LiteralNode(v)) :@ AndroidType(ti, option) =>
         if(n.volatileHint || !ti.hasLiteralForm) b +?= { (p, idx, param) =>
           if(option) ti.setOption(v.asInstanceOf[Option[Any]], p, idx)
           else ti.setValue(v, p, idx)
         } else b += valueToSQLLiteral(v, n.nodeType)
-      case QueryParameter(extractor, JdbcType(ti, option)) =>
+      case QueryParameter(extractor, AndroidType(ti, option)) =>
         b +?= { (p, idx, param) =>
           if(option) ti.setOption(extractor(param).asInstanceOf[Option[Any]], p, idx)
           else ti.setValue(extractor(param), p, idx)
@@ -308,7 +322,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
         b")"
         if(s.scalar) b += '}'
       case SimpleLiteral(w) => b += w
-      case s: SimpleExpression => s.toSQL(this)
+      case s: SimpleExpression => throw new SlickException(s"SimpleExpression not yet supported on android: $s") //s.toSQL(this)
       case Library.Between(left, start, end) => b"$left between $start and $end"
       case Library.CountDistinct(e) => b"count(distinct $e)"
       case Library.Like(l, r) => b"\($l like $r\)"
@@ -325,7 +339,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
       case Library.Cast(ch @ _*) =>
         val tn =
           if(ch.length == 2) ch(1).asInstanceOf[LiteralNode].value.asInstanceOf[String]
-          else jdbcTypeFor(n.nodeType).sqlTypeName
+          else androidTypeFor(n.nodeType).sqlTypeName
         if(supportsCast) b"cast(${ch(0)} as $tn)"
         else b"{fn convert(!${ch(0)},$tn)}"
       case Library.SilentCast(ch) => b"$ch"
@@ -370,11 +384,14 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     }
 
     protected def buildOrdering(n: Node, o: Ordering) {
+      if(o.nulls.last && !o.direction.desc)
+        b"($n) is null,"
+      else if(o.nulls.first && o.direction.desc)
+        b"($n) is null desc,"
       expr(n)
       if(o.direction.desc) b" desc"
-      if(o.nulls.first) b" nulls first"
-      else if(o.nulls.last) b" nulls last"
     }
+
 
     def buildUpdate: SQLBuilder.Result = {
       val (gen, from, where, select) = tree match {
@@ -532,13 +549,21 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     }
   }
 
-  /** Builder for upsert statements, builds standard SQL MERGE statements by default. */
+
+  /* Extending super.InsertBuilder here instead of super.UpsertBuilder. INSERT OR REPLACE is almost identical to INSERT. */
   class UpsertBuilder(ins: Insert) extends InsertBuilder(ins) {
+    override protected def buildInsertStart = allNames.mkString(s"insert or replace into $tableName (", ",", ") ")
+  }
+
+  /** Builder for upsert statements, builds standard SQL MERGE statements by default. */
+  class JdbcUpsertBuilder(ins: Insert) extends InsertBuilder(ins) {
     protected lazy val (pkSyms, softSyms) = syms.partition(_.options.contains(ColumnOption.PrimaryKey))
     protected lazy val pkNames = pkSyms.map { fs => quoteIdentifier(fs.name) }
     protected lazy val softNames = softSyms.map { fs => quoteIdentifier(fs.name) }
     protected lazy val nonAutoIncSyms = syms.filterNot(_.options contains ColumnOption.AutoInc)
     protected lazy val nonAutoIncNames = nonAutoIncSyms.map(fs => quoteIdentifier(fs.name))
+
+    override def buildInsertStart = allNames.mkString(s"insert or replace into $tableName (", ",", ") ")
 
     override def buildInsert: InsertBuilderResult = {
       val start = buildMergeStart
@@ -562,14 +587,14 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
   /** Builder for SELECT statements that can be used to check for the existing of
     * primary keys supplied to an INSERT operation. Used by the insertOrUpdate emulation
     * on databases that don't support this in a single server-side statement. */
-  class CheckInsertBuilder(ins: Insert) extends UpsertBuilder(ins) {
+  class CheckInsertBuilder(ins: Insert) extends JdbcUpsertBuilder(ins) {
     override def buildInsert: InsertBuilderResult =
       new InsertBuilderResult(table, pkNames.map(n => s"$n=?").mkString(s"select 1 from $tableName where ", " and ", ""), pkSyms)
   }
 
   /** Builder for UPDATE statements used as part of an insertOrUpdate operation
     * on databases that don't support this in a single server-side statement. */
-  class UpdateInsertBuilder(ins: Insert) extends UpsertBuilder(ins) {
+  class UpdateInsertBuilder(ins: Insert) extends JdbcUpsertBuilder(ins) {
     override def buildInsert: InsertBuilderResult =
       new InsertBuilderResult(table,
         "update " + tableName + " set " + softNames.map(n => s"$n=?").mkString(",") + " where " + pkNames.map(n => s"$n=?").mkString(" and "),
@@ -583,19 +608,17 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
     protected val tableNode = table.toNode.asInstanceOf[TableExpansion].table.asInstanceOf[TableNode]
     protected val columns: Iterable[ColumnDDLBuilder] = table.create_*.map(fs => createColumnDDLBuilder(fs, table))
     protected val indexes: Iterable[Index] = table.indexes
-    protected val foreignKeys: Iterable[ForeignKey] = table.foreignKeys
-    protected val primaryKeys: Iterable[PrimaryKey] = table.primaryKeys
+    protected val foreignKeys: Iterable[ForeignKey] = table.foreignKeys // handled directly in addTableOptions
+    protected val primaryKeys: Iterable[PrimaryKey] = table.primaryKeys // handled directly in addTableOptions
 
     def buildDDL: DDL = {
       if(primaryKeys.size > 1)
         throw new SlickException("Table "+tableNode.tableName+" defines multiple primary keys ("
           + primaryKeys.map(_.name).mkString(", ") + ")")
-      DDL(createPhase1, createPhase2, dropPhase1, dropPhase2)
+      DDL(createPhase1, Nil, Nil, dropPhase2)
     }
 
-    protected def createPhase1 = Iterable(createTable) ++ primaryKeys.map(createPrimaryKey) ++ indexes.map(createIndex)
-    protected def createPhase2 = foreignKeys.map(createForeignKey)
-    protected def dropPhase1 = foreignKeys.map(dropForeignKey)
+    protected def createPhase1 = Iterable(createTable) ++ indexes.map(createIndex)
     protected def dropPhase2 = primaryKeys.map(dropPrimaryKey) ++ Iterable(dropTable)
 
     protected def createTable: String = {
@@ -604,6 +627,14 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
       for(c <- columns) {
         if(first) first = false else b append ","
         c.appendColumn(b)
+      }
+      for(pk <- primaryKeys) {
+        b append ","
+        addPrimaryKey(pk, b)
+      }
+      for(fk <- foreignKeys) {
+        b append ","
+        addForeignKey(fk, b)
       }
       addTableOptions(b)
       b append ")"
@@ -623,12 +654,6 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
       b.toString
     }
 
-    protected def createForeignKey(fk: ForeignKey): String = {
-      val sb = new StringBuilder append "alter table " append quoteTableName(tableNode) append " add "
-      addForeignKey(fk, sb)
-      sb.toString
-    }
-
     protected def addForeignKey(fk: ForeignKey, sb: StringBuilder) {
       sb append "constraint " append quoteIdentifier(fk.name) append " foreign key("
       addForeignKeyColumnList(fk.linearizedSourceColumns, sb, tableNode.tableName)
@@ -638,20 +663,11 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
       sb append " on delete " append fk.onDelete.action
     }
 
-    protected def createPrimaryKey(pk: PrimaryKey): String = {
-      val sb = new StringBuilder append "alter table " append quoteTableName(tableNode) append " add "
-      addPrimaryKey(pk, sb)
-      sb.toString
-    }
-
     protected def addPrimaryKey(pk: PrimaryKey, sb: StringBuilder) {
       sb append "constraint " append quoteIdentifier(pk.name) append " primary key("
       addPrimaryKeyColumnList(pk.columns, sb, tableNode.tableName)
       sb append ")"
     }
-
-    protected def dropForeignKey(fk: ForeignKey): String =
-      "alter table " + quoteTableName(tableNode) + " drop constraint " + quoteIdentifier(fk.name)
 
     protected def dropPrimaryKey(pk: PrimaryKey): String =
       "alter table " + quoteTableName(tableNode) + " drop constraint " + quoteIdentifier(pk.name)
@@ -681,7 +697,7 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
 
   /** Builder for column specifications in DDL statements. */
   class ColumnDDLBuilder(column: FieldSymbol) {
-    protected val JdbcType(jdbcType, isOption) = column.tpe
+    protected val AndroidType(jdbcType, isOption) = column.tpe
     protected var sqlType: String = null
     protected var customSqlType: Boolean = false
     protected var notNull = !isOption
@@ -713,9 +729,9 @@ trait AndroidStatementBuilderComponent { driver: AndroidDriver =>
 
     protected def appendOptions(sb: StringBuilder) {
       if(defaultLiteral ne null) sb append " DEFAULT " append defaultLiteral
-      if(autoIncrement) sb append " GENERATED BY DEFAULT AS IDENTITY(START WITH 1)"
+      if(autoIncrement) sb append " PRIMARY KEY AUTOINCREMENT"
+      else if(primaryKey) sb append " PRIMARY KEY"
       if(notNull) sb append " NOT NULL"
-      if(primaryKey) sb append " PRIMARY KEY"
     }
   }
 
