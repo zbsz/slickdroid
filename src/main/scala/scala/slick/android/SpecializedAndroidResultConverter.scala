@@ -57,7 +57,7 @@ class BaseResultConverter[@specialized(Byte, Short, Int, Long, Char, Float, Doub
     ti.getValue(pr, idx - 1)
   }
   def update(value: T, pr: Updater) = throw new SlickException("update on cursor not supported")
-  def set(value: T, pp: SQLiteStatement) = ti.setValue(value, pp, idx)
+  def set(value: T, pp: SQLiteStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
   override def info = super.info + "(" + Dump + ti + Dump + s", idx=$idx, name=$name)"
   def width = 1
 }
@@ -92,7 +92,7 @@ class DefaultingResultConverter[@specialized(Byte, Short, Int, Long, Char, Float
     if(ti.isNull(pr, idx - 1)) default() else ti.getValue(pr, idx - 1)
   }
   def update(value: T, pr: Updater) = throw new SlickException("update on cursor not supported")
-  def set(value: T, pp: SQLiteStatement) = ti.setValue(value, pp, idx)
+  def set(value: T, pp: SQLiteStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
   override def info =
     super.info + "(" + Dump + ti + Dump + ", idx=" + idx + ", default=" +
       { try default() catch { case e: Throwable => "["+e.getClass.getName+"]" } } + ")"

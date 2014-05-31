@@ -43,7 +43,7 @@ class MainSpec extends AndroidBackendSpec { mainTest =>
     /* All test DBs seem to report the actual number of rows.
      * None would also be an acceptable result here. */
     withClue("returned row count should be 7 or unknown") {
-      total == Some(7) || total == None shouldEqual true
+      total shouldEqual Some(7)
     }
 
     val q1 = for(u <- users) yield (u.id, u.first, u.last)
