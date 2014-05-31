@@ -2,11 +2,12 @@ package scala.slick.android
 
 import scala.language.{higherKinds, existentials}
 import scala.slick.SlickException
-import scala.slick.ast._
+import scala.slick.ast.{ColumnOption, Node}
 import scala.slick.lifted.{CompiledStreamingExecutable, FlatShapeLevel, Query, Shape}
 import scala.slick.profile.BasicInsertInvokerComponent
-import scala.Some
 import android.database.sqlite.SQLiteStatement
+import android.database.MatrixCursor
+import scala.util.control.NonFatal
 
 /** A slice of the `JdbcProfile` cake which provides the functionality for
   * different kinds of insert operations. */
@@ -18,11 +19,6 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
   // Create the different invokers -- these methods should be overridden by drivers as needed
   def createCountingInsertInvoker[U](compiled: CompiledInsert): CountingInsertInvokerDef[U] = new CountingInsertInvoker[U](compiled)
   def createReturningInsertInvoker[U, RU](compiled: CompiledInsert, keys: Node): ReturningInsertInvokerDef[U, RU] = new ReturningInsertInvoker[U, RU](compiled, keys)
-
-  protected lazy val useServerSideUpsert = false // sqlite doesn't support that in general
-  protected lazy val useTransactionForUpsert = !useServerSideUpsert
-  protected lazy val useServerSideUpsertReturning = useServerSideUpsert
-  protected lazy val useTransactionForUpsertReturning = !useServerSideUpsertReturning
 
   //////////////////////////////////////////////////////////// InsertInvokerDef Traits
 
@@ -141,15 +137,15 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
   //////////////////////////////////////////////////////////// InsertInvoker Implementations
 
   protected abstract class BaseInsertInvoker[U](protected val compiled: CompiledInsert) extends FullInsertInvokerDef[U] {
-    protected def useServerSideUpsert = driver.useServerSideUpsert
-    protected def useTransactionForUpsert = driver.useTransactionForUpsert
+    protected def useServerSideUpsert = false
+    protected def useTransactionForUpsert = true
     protected def useBatchUpdates(implicit session: Backend#Session) = session.capabilities.supportsBatchUpdates
 
-    protected def retOne(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertResult
+    protected def retOne(st: SQLiteStatement, value: U, rowId: Long): SingleInsertResult
     protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]): MultiInsertResult
-    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], updateCounts: Array[Int]): MultiInsertResult
+    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], rowIds: Array[Long]): MultiInsertResult
     protected def retOneInsertOrUpdate(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult
-    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult
+    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, rowId: Long): SingleInsertOrUpdateResult
     protected def retOneInsertOrUpdateFromUpdate: SingleInsertOrUpdateResult
 
     lazy val insertStatement = compiled.standardInsert.sql
@@ -178,7 +174,7 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
       preparedInsert(a.sql) { st =>
         st.clearBindings()
         a.converter.set(value, st)
-        retOne(st, value, st.executeInsert().toInt)
+        retOne(st, value, st.executeInsert())
       }
 
     final def insertAll(values: U*)(implicit session: Backend#Session): MultiInsertResult = internalInsertAll(compiled.standardInsert, values: _*)
@@ -195,7 +191,7 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
           preparedInsert(compiled.upsert.sql) { st =>
             st.clearBindings()
             compiled.upsert.converter.set(value, st)
-            retOneInsertOrUpdate(st, value, st.executeInsert().toInt)
+            retOneInsertOrUpdate(st, value, st.executeUpdateDelete())
           }
         } else internalInsertOrUpdateEmulation(value)
       }
@@ -206,7 +202,11 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
       val found = preparedOther(compiled.checkInsert.sql) { st =>
         st.clearBindings()
         compiled.checkInsert.converter.set(value, st)
-        st.simpleQueryForLong() > -1
+        try { st.simpleQueryForLong(); true } catch {
+          case NonFatal(e) =>
+            //e.printStackTrace() // TODO: use regular query
+            false
+        }
       }
       if(found) preparedOther(compiled.updateInsert.sql) { st =>
         st.clearBindings()
@@ -216,7 +216,7 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
       } else preparedInsert(compiled.standardInsert.sql) { st =>
         st.clearBindings()
         compiled.standardInsert.converter.set(value, st)
-        retOneInsertOrUpdateFromInsert(st, value, st.executeInsert().toInt)
+        retOneInsertOrUpdateFromInsert(st, value, st.executeInsert())
       }
     }
 
@@ -235,7 +235,7 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
       preparedInsert(sbr.sql) { st =>
         st.clearBindings()
         sbr.setter(st, 1, param)
-        retQuery(st, st.executeInsert().toInt)
+        retQuery(st, st.executeUpdateDelete())
       }
     }
   }
@@ -247,63 +247,64 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
     override protected val useServerSideUpsert = compiled.upsert.fields.forall(fs => !fs.options.contains(ColumnOption.AutoInc))
     override protected def useTransactionForUpsert = !useServerSideUpsert
 
-    protected def retOne(st: SQLiteStatement, value: U, updateCount: Int) = updateCount
+    protected def retOne(st: SQLiteStatement, value: U, updateCount: Long) = updateCount.toInt
 
     protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]) = Some(individual.sum)
 
-    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], updateCounts: Array[Int]) = {
-      var count = 0
+    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], updateCounts: Array[Long]) = {
+      var count = 0L
       for((res, idx) <- updateCounts.zipWithIndex) res match {
         case -1 => throw new SlickException("Failed to insert row #" + (idx+1))
         case i => count += i
       }
-      Some(count)
+      Some(count.toInt)
     }
 
     protected def retQuery(st: SQLiteStatement, updateCount: Int) = updateCount
 
-    protected def retOneInsertOrUpdate(st: SQLiteStatement, value: U, updateCount: Int) = 1
-    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, updateCount: Int) = 1
+    protected def retOneInsertOrUpdate(st: SQLiteStatement, value: U, updateCount: Int) = updateCount
+    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, rowId: Long) = if (rowId < 0) 0 else 1
     protected def retOneInsertOrUpdateFromUpdate = 1
 
     def returning[RT, RU, C[_]](value: Query[RT, RU, C]) = createReturningInsertInvoker[U, RU](compiled, value.toNode)
   }
 
   protected class ReturningInsertInvoker[U, RU](compiled: CompiledInsert, keys: Node) extends BaseInsertInvoker[U](compiled) with ReturningInsertInvokerDef[U, RU] {
-    override protected def useServerSideUpsert = driver.useServerSideUpsertReturning
-    override protected def useTransactionForUpsert = driver.useTransactionForUpsertReturning
 
-    protected def checkInsertOrUpdateKeys: Unit =
+    protected def checkInsertOrUpdateKeys(): Unit =
       if(keyReturnOther) throw new SlickException("Only a single AutoInc column may be returned from an insertOrUpdate call")
 
-    protected def buildKeysResult(st: SQLiteStatement): Invoker[RU] =
-//      ResultSetInvoker[RU](_ => st.getGeneratedKeys)(pr => keyConverter.read(pr.rs).asInstanceOf[RU])
-      ???
-
-    // Returning keys from batch inserts is generally not supported
-    override def useBatchUpdates(implicit session: Backend#Session) = false
+    protected def buildKeysResult(rowIds: Long*): Invoker[RU] = {
+      val cursor = new MatrixCursor(keyColumns.toArray)
+      rowIds foreach { rowId =>
+        cursor.addRow(Array[AnyRef](java.lang.Long.valueOf(rowId)))
+      }
+      cursor.moveToFirst()
+      ResultSetInvoker[RU](_ => cursor)(pr => keyConverter.read(pr.rs).asInstanceOf[RU])
+    }
 
     protected lazy val (keyColumns, keyConverter, keyReturnOther) = compiled.buildReturnColumns(keys)
 
-    override protected def preparedInsert[T](sql: String)(f: SQLiteStatement => T)(implicit session: Backend#Session) =
+    override protected def preparedInsert[T](sql: String)(f: SQLiteStatement => T)(implicit session: Backend#Session) = {
       session.withPreparedStatement(sql)(f)
+    }
 
-    protected def retOne(st: SQLiteStatement, value: U, updateCount: Int) =
-      buildKeysResult(st).first(null)
+    protected def retOne(st: SQLiteStatement, value: U, rowId: Long) = keyConverter.read(IdReturnCursor(rowId)).asInstanceOf[RU]
 
     protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]) = individual
 
-    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], updateCounts: Array[Int]) =
-      buildKeysResult(st).buildColl[Vector](null, implicitly)
+    protected def retManyBatch(st: SQLiteStatement, values: Seq[U], rowIds: Array[Long]) =
+      rowIds map { rowId =>
+        keyConverter.read(IdReturnCursor(rowId)).asInstanceOf[RU]
+      }
 
-    protected def retQuery(st: SQLiteStatement, updateCount: Int) =
-      buildKeysResult(st).buildColl[Vector](null, implicitly)
+    protected def retQuery(st: SQLiteStatement, updateCount: Int) = ???
+//      buildKeysResult(st).buildColl[Vector](null, implicitly)
 
-    protected def retOneInsertOrUpdate(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult =
-      if(updateCount != 1) None else buildKeysResult(st).firstOption(null)
+    protected def retOneInsertOrUpdate(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult = ??? // will never be used do to useServerSideUpsert = false
 
-    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult =
-      Some(buildKeysResult(st).first(null))
+    protected def retOneInsertOrUpdateFromInsert(st: SQLiteStatement, value: U, rowId: Long): SingleInsertOrUpdateResult =
+      if (rowId < 0) None else Some(keyConverter.read(IdReturnCursor(rowId)).asInstanceOf[RU])
 
     protected def retOneInsertOrUpdateFromUpdate: SingleInsertOrUpdateResult = None
   }
