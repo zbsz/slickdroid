@@ -12,7 +12,7 @@ import scala.slick.util.{ReadAheadIterator, CloseableIterator}
  */
 abstract class PositionedResult(val rs: Cursor) extends Closeable { outer =>
   protected[this] var pos = Int.MaxValue
-  protected[this] val startPos = 0
+  protected[this] val startPos = -1
 
   lazy val numColumns = rs.getColumnCount
 

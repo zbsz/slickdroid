@@ -4,7 +4,6 @@ import scala.language.{higherKinds, existentials}
 import scala.slick.ast.{CompiledStatement, ResultSetMapping, Node, ParameterSwitch}
 import scala.slick.profile.BasicInvokerComponent
 import scala.slick.relational.{ResultConverter, CompiledMapping}
-import android.util.Log
 
 trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriver =>
 
@@ -25,29 +24,6 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
       case c: CompiledStatement => c
       case ParameterSwitch(cases, default) =>
         findCompiledStatement(cases.find { case (f, n) => f(param) }.map(_._2).getOrElse(default))
-    }
-
-    /** Invoke the statement and return the raw results. */
-    override def results(maxRows: Int)(implicit session: AndroidBackend#Session): Either[Int, PositionedResultIterator[R]] = {
-      val st = session.prepareStatement(getStatement)
-      setParam(st)
-      Log.d("QueryInvoker", s"results(maxRows: $maxRows), st: '$st'")
-      var doClose = true
-      try {
-        val cursor = st.executeQuery()
-        Log.d("QueryInvoker", s"cursor count: ${cursor.getCount}")
-        val pr = new PositionedResult(cursor) {
-          override def close() = {
-            super.close()
-            st.close()
-          }
-        }
-        val rs = new PositionedResultIterator[R](pr, maxRows) {
-          def extractValue(pr: PositionedResult) = self.extractValue(pr)
-        }
-        doClose = false
-        Right(rs)
-      } finally if(doClose) st.close()
     }
 
     protected def getStatement = sres.sql

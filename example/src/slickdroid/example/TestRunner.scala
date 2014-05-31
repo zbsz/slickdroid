@@ -54,7 +54,8 @@ object TestRunner {
       new IterateeSpec(),
       new TemplateSpec(),
       new NewQuerySemanticsSpec(),
-      new NullabilitySpec()
+      new NullabilitySpec(),
+      new PlainSQLSpec()
     )
 
     val suites = specs.map(spec => Suite(spec.suiteName))
