@@ -70,43 +70,61 @@ object TestRunner {
 
 import TestRunner._
 
-case class Test(name: String, var state: Int = StateUnknown)
+case class Test(name: String, suite: Suite, var state: Int = StateUnknown)
 
-case class Suite(name: String, var state: Int = StateUnknown, var tests: List[Test] = Nil)
+case class Suite(name: String, var state: Int = StateUnknown, var tests: List[Test] = Nil, var runner: Option[SuiteRunner] = None)
 
 class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAdapter) extends Reporter {
 
+  suite.runner = Some(this)
+
   var current: Test = _
   var failed = false
+  var running = false
 
-  Executor.submit(new Runnable() {
-    override def run(): Unit = {
-      try {
-        spec.run(None, new Args(SuiteRunner.this))
+  start()
 
-        if (!failed) {
-          ui {
-            suite.state = StatePassed
-            adapter.notifyDataSetChanged()
+  def start(testName: Option[String] = None): Unit = {
+    if (!running) {
+      running = true
+      failed = false
+      ui {
+        suite.tests = Nil
+        suite.state = StateUnknown
+        adapter.notifyDataSetChanged()
+      }
+      Executor.submit(new Runnable() {
+        override def run(): Unit = {
+          try {
+            spec.run(testName, new Args(SuiteRunner.this))
+
+            if (!failed) {
+              ui {
+                suite.state = StatePassed
+                adapter.notifyDataSetChanged()
+              }
+            }
+          } catch {
+            case NonFatal(e) =>
+              ui { suite.state = StateError; adapter.notifyDataSetChanged() }
+              Log.e("SuiteRunner", s"Suite: ${suite.name} aborted", e)
+          } finally {
+            running = false
           }
         }
-      } catch {
-        case NonFatal(e) =>
-          ui { suite.state = StateError; adapter.notifyDataSetChanged() }
-          Log.e("SuiteRunner", s"Suite: ${suite.name} aborted", e)
-      }
+      })
     }
-  })
+  }
 
   def ui(body: => Unit) = TestRunner.UiHandler.post(new Runnable {
     override def run(): Unit = body
   })
 
   override def apply(event: Event): Unit = ui {
-    Log.d("Event", event.toString)
+    Log.d("TestEvent", event.toString)
     event match {
       case e: TestStarting =>
-        current = Test(e.testName)
+        current = Test(e.testName, suite)
         suite.tests = suite.tests ::: List(current)
       case e: TestCanceled =>
         current.state = StateError
@@ -114,6 +132,7 @@ class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAd
         failed = true
         current.state = StateFailed
         suite.state = StateFailed
+        Log.e("TestFailed", e.message, e.throwable.getOrElse(null))
       case e: TestSucceeded =>
         current.state = StatePassed
       case e: SuiteCompleted =>

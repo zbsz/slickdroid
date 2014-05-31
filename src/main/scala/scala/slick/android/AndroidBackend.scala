@@ -7,7 +7,8 @@ import scala.slick.util.SlickLogger
 import org.slf4j.LoggerFactory
 
 trait AndroidBackend extends DatabaseComponent {
-  protected[this] lazy val statementLogger = new SlickLogger(LoggerFactory.getLogger(classOf[AndroidBackend].getName+".statement"))
+//  protected[this] lazy val statementLogger = new SlickLogger(LoggerFactory.getLogger(classOf[AndroidBackend].getName+".statement"))
+  protected[this] lazy val statementLogger = new AndroidSlickLogger(classOf[AndroidBackend].getName+".statement")
 
   type Database = DatabaseDef
   type Session = SessionDef
