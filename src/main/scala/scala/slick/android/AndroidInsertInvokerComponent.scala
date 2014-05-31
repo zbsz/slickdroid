@@ -4,7 +4,6 @@ import scala.language.{higherKinds, existentials}
 import scala.slick.SlickException
 import scala.slick.ast._
 import scala.slick.lifted.{CompiledStreamingExecutable, FlatShapeLevel, Query, Shape}
-import scala.slick.jdbc._
 import scala.slick.profile.BasicInsertInvokerComponent
 import scala.Some
 import android.database.sqlite.SQLiteStatement

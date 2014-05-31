@@ -2,7 +2,6 @@ package scala.slick.android
 
 import scala.language.{higherKinds, existentials}
 import scala.slick.ast.{CompiledStatement, ResultSetMapping, Node, ParameterSwitch}
-import scala.slick.jdbc._
 import scala.slick.profile.BasicInvokerComponent
 import scala.slick.relational.{ResultConverter, CompiledMapping}
 import android.database.sqlite.SQLiteStatement
@@ -15,16 +14,8 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
   def createQueryInvoker[R](tree: Node, param: Any): QueryInvoker[R] = new QueryInvoker[R](tree, param)
   def createDDLInvoker(ddl: SchemaDescription) = new DDLInvoker(ddl)
 
-  // Parameters for invokers -- can be overridden by drivers as needed
-  protected val invokerMutateConcurrency: ResultSetConcurrency = ResultSetConcurrency.Updatable
-  protected val invokerMutateType: ResultSetType = ResultSetType.Auto
-  protected val invokerPreviousAfterDelete = false
-
   /** An Invoker for queries. */
-  class QueryInvoker[R](tree: Node, param: Any) extends MutatingStatementInvoker[R] {
-    override protected val mutateConcurrency = invokerMutateConcurrency
-    override protected val mutateType = invokerMutateType
-    override protected val previousAfterDelete = invokerPreviousAfterDelete
+  class QueryInvoker[R](tree: Node, param: Any) extends StatementInvoker[R] {
 
     protected[this] val ResultSetMapping(_, compiled, CompiledMapping(_converter, _)) = tree
     protected[this] val converter = _converter.asInstanceOf[ResultConverter[AndroidResultConverterDomain, R]]

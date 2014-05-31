@@ -3,7 +3,7 @@ package scala.slick.android
 import scala.slick.profile.{Capability, SqlDriver, RelationalProfile, SqlProfile}
 import scala.slick.ast.{BaseTypedType, Node}
 import scala.slick.compiler.{InsertCompiler, Phase, QueryCompiler}
-import scala.slick.lifted.{ColumnBase, MappedProjection, RunnableCompiled, Query}
+import scala.slick.lifted.{ColumnBase, RunnableCompiled, Query}
 import scala.slick.jdbc.JdbcFastPath
 
 /** A profile for accessing SQL databases via JDBC. All drivers for JDBC-based databases
@@ -60,7 +60,6 @@ trait AndroidProfile extends SqlProfile with AndroidTableComponent
       createUpdateInvoker(c.compiledUpdate, c.param)
     implicit def runnableCompiledToDeleteInvoker[RU, C[_]](c: RunnableCompiled[_ <: Query[_, _, C], C[RU]]): DeleteInvoker =
       createDeleteInvoker(c.compiledDelete, c.param)
-    implicit def jdbcFastPathExtensionMethods[T, P](mp: MappedProjection[T, P]) = new JdbcFastPathExtensionMethods[T, P](mp)
 
     // This conversion only works for fully packed types
     implicit def productQueryToUpdateInvoker[T, C[_]](q: Query[_ <: ColumnBase[T], T, C]): UpdateInvoker[T] =

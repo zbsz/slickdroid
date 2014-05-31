@@ -4,7 +4,6 @@ import scala.collection.mutable.Builder
 import scala.slick.ast._
 import scala.slick.ast.Util._
 import scala.slick.ast.TypeUtil._
-import scala.slick.util.SQLBuilder
 import scala.slick.profile.SqlExecutorComponent
 import scala.slick.lifted.{Shape, FlatShapeLevel}
 import scala.slick.relational.CompiledMapping
