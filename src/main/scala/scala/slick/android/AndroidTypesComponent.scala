@@ -111,6 +111,8 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
       def sqlType = java.sql.Types.BOOLEAN
       def setValue(v: Boolean, p: SQLiteStatement, idx: Int) = p.bindLong(idx, if (v) 1 else 0)
       def getValue(r: Cursor, idx: Int) = r.getInt(idx) == 1
+      override def sqlTypeName = "INTEGER"
+      override def valueToSQLLiteral(value: Boolean) = if(value) "1" else "0"
     }
 
     class BlobAndroidType extends DriverAndroidType[Blob] {
@@ -219,7 +221,7 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
     }
 
     class UUIDSQLiteType extends DriverAndroidType[UUID] {
-      def sqlType = java.sql.Types.OTHER
+      def sqlType = java.sql.Types.BLOB
       def setValue(v: UUID, p: SQLiteStatement, idx: Int) = p.bindBlob(idx, toBytes(v))
       def getValue(r: Cursor, idx: Int) = fromBytes(r.getBlob(idx))
       override def hasLiteralForm = false
