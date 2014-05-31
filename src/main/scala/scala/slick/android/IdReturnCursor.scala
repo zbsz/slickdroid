@@ -7,7 +7,7 @@ import android.net.Uri
 
 /**
   */
-case class IdReturnCursor(var id: Long = 0) extends Cursor {
+case class IdReturnCursor(var id: Long = 0, keyName: String = "id") extends Cursor {
   private var idx = 0
 
   override def getCount: Int = 1
@@ -50,7 +50,7 @@ case class IdReturnCursor(var id: Long = 0) extends Cursor {
 
   override def getColumnCount: Int = 1
 
-  override def getColumnName(columnIndex: Int): String = "id"
+  override def getColumnName(columnIndex: Int): String = keyName
 
   override def getFloat(columnIndex: Int): Float = id.toFloat
 

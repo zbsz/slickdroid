@@ -35,18 +35,18 @@ object TestRunner {
     val specs = List(
       new SampleSpec(),
       new MainSpec(),
-      new InvokerSpec(),
+//      new InvokerSpec(),
       new ExecutorSpec(),
       new PrimaryKeySpec(),
       new ColumnDefaultSpec(),
       new InsertSpec(),
       new CountSpec(),
-      new ForeignKeySpec(),
+//      new ForeignKeySpec(),
       new JoinSpec(),
       new MapperSpec(),
       new TransactionSpec(),
       new UnionSpec(),
-      new AggregateSpec(),
+//      new AggregateSpec(),
       new ScalarFunctionsSpec(),
       new RelationalTypeSpec(),
       new NestingSpec(),
@@ -54,8 +54,8 @@ object TestRunner {
       new IterateeSpec(),
       new TemplateSpec(),
       new NewQuerySemanticsSpec(),
-      new NullabilitySpec(),
-      new PlainSQLSpec()
+      new NullabilitySpec()
+//      new PlainSQLSpec()
     )
 
     val suites = specs.map(spec => Suite(spec.suiteName))
@@ -77,6 +77,8 @@ case class Suite(name: String, var state: Int = StateUnknown, var tests: List[Te
 
 class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAdapter) extends Reporter {
 
+  Log.d("SuiteRunner", s"init")
+
   suite.runner = Some(this)
 
   var current: Test = _
@@ -86,6 +88,8 @@ class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAd
   start()
 
   def start(testName: Option[String] = None): Unit = {
+    Log.d("SuiteRunner", s"start $suite,  $testName")
+
     if (!running) {
       running = true
       failed = false

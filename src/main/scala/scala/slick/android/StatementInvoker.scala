@@ -21,18 +21,19 @@ abstract class StatementInvoker[+R] extends Invoker[R] { self =>
       var doClose = true
       try {
         val cursor = st.executeQuery()
-        Log.d("QueryInvoker", s"cursor count: ${cursor.getCount}")
-        val pr = new PositionedResult(cursor) {
-          override def close() = {
-            super.close()
-            st.close()
-          }
-        }
-        val rs = new PositionedResultIterator[R](pr, maxRows) {
-          def extractValue(pr: PositionedResult) = self.extractValue(pr)
-        }
-        doClose = false
-        Right(rs)
+//        Log.d("QueryInvoker", s"cursor count: ${cursor.getCount}")
+//        val pr = new PositionedResult(cursor) {
+//          override def close() = {
+//            super.close()
+//            st.close()
+//          }
+//        }
+//        val rs = new PositionedResultIterator[R](pr, maxRows) {
+//          def extractValue(pr: PositionedResult) = self.extractValue(pr)
+//        }
+//        doClose = false
+//        Right(rs)
+        ???
       } finally if(doClose) st.close()
     } else {
       try {

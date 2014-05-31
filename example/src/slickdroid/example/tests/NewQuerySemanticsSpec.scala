@@ -1,7 +1,7 @@
 package slickdroid.example.tests
 
 
-import scala.slick.android.AndroidDriver.simple._
+import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */

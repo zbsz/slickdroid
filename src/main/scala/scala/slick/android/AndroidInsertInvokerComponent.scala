@@ -200,7 +200,8 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
         st.clearBindings()
         compiled.checkInsert.converter.set(value, st)
         val c = st.executeQuery()
-        try { c.moveToFirst() } finally { c.close() }
+//        try { c.moveToFirst() } finally { c.close() }
+        false
       }
       if(found) preparedOther(compiled.updateInsert.sql) { st =>
         st.clearBindings()

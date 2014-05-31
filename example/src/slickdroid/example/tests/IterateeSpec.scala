@@ -1,6 +1,6 @@
 package slickdroid.example.tests
 
-import scala.slick.android.AndroidDriver.simple._
+import scala.slick.android.SlickDroidDriver.simple._
 import scala.slick.util.iter._
 import scala.slick.util.iter.Done
 import scala.slick.util.iter.El
