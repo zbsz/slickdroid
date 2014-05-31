@@ -3,12 +3,13 @@ package scala.slick.android
 import scala.language.{higherKinds, existentials}
 import java.sql.{Statement, PreparedStatement}
 import scala.slick.SlickException
-import scala.slick.ast.{Insert, CompiledStatement, ResultSetMapping, Node}
+import scala.slick.ast._
 import scala.slick.lifted.{CompiledStreamingExecutable, FlatShapeLevel, Query, Shape}
 import scala.slick.jdbc._
 import scala.slick.util.SQLBuilder
 import scala.slick.profile.BasicInsertInvokerComponent
 import scala.slick.relational.{ResultConverter, CompiledMapping}
+import scala.Some
 
 /** A slice of the `JdbcProfile` cake which provides the functionality for
   * different kinds of insert operations. */
@@ -257,6 +258,12 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
   }
 
   protected class CountingInsertInvoker[U](compiled: CompiledInsert) extends BaseInsertInvoker[U](compiled) with CountingInsertInvokerDef[U] {
+
+    // SQLite cannot perform server-side insert-or-update with soft insert semantics. We don't have to do
+    // the same in ReturningInsertInvoker because SQLite does not allow returning non-AutoInc keys anyway.
+    override protected val useServerSideUpsert = compiled.upsert.fields.forall(fs => !fs.options.contains(ColumnOption.AutoInc))
+    override protected def useTransactionForUpsert = !useServerSideUpsert
+
     protected def retOne(st: Statement, value: U, updateCount: Int) = updateCount
 
     protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]) = Some(individual.sum)
