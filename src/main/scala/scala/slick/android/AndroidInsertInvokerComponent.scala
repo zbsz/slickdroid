@@ -6,7 +6,6 @@ import scala.slick.ast.{ColumnOption, Node}
 import scala.slick.lifted.{CompiledStreamingExecutable, FlatShapeLevel, Query, Shape}
 import scala.slick.profile.BasicInsertInvokerComponent
 import android.database.MatrixCursor
-import scala.util.control.NonFatal
 
 /** A slice of the `JdbcProfile` cake which provides the functionality for
   * different kinds of insert operations. */
@@ -142,10 +141,9 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
 
     protected def retOne(st: PreparedStatement, value: U, rowId: Long): SingleInsertResult
     protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]): MultiInsertResult
-    protected def retManyBatch(st: PreparedStatement, values: Seq[U], rowIds: Array[Long]): MultiInsertResult
     protected def retOneInsertOrUpdate(st: PreparedStatement, value: U, updateCount: Int): SingleInsertOrUpdateResult
     protected def retOneInsertOrUpdateFromInsert(st: PreparedStatement, value: U, rowId: Long): SingleInsertOrUpdateResult
-    protected def retOneInsertOrUpdateFromUpdate: SingleInsertOrUpdateResult
+    protected def retOneInsertOrUpdateFromUpdate(updateCount: Int): SingleInsertOrUpdateResult
 
     lazy val insertStatement = compiled.standardInsert.sql
     lazy val forceInsertStatement = compiled.forceInsert.sql
@@ -207,8 +205,7 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
       if(found) preparedOther(compiled.updateInsert.sql) { st =>
         st.clearBindings()
         compiled.updateInsert.converter.set(value, st)
-        st.executeUpdateDelete()
-        retOneInsertOrUpdateFromUpdate
+        retOneInsertOrUpdateFromUpdate(st.executeUpdateDelete())
       } else preparedInsert(compiled.standardInsert.sql) { st =>
         st.clearBindings()
         compiled.standardInsert.converter.set(value, st)
@@ -243,24 +240,15 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
     override protected val useServerSideUpsert = compiled.upsert.fields.forall(fs => !fs.options.contains(ColumnOption.AutoInc))
     override protected def useTransactionForUpsert = !useServerSideUpsert
 
-    protected def retOne(st: PreparedStatement, value: U, updateCount: Long) = updateCount.toInt
+    protected def retOne(st: PreparedStatement, value: U, rowId: Long) = if (rowId < 0) 0 else 1
 
-    protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]) = Some(individual.sum)
-
-    protected def retManyBatch(st: PreparedStatement, values: Seq[U], updateCounts: Array[Long]) = {
-      var count = 0L
-      for((res, idx) <- updateCounts.zipWithIndex) res match {
-        case -1 => throw new SlickException("Failed to insert row #" + (idx+1))
-        case i => count += i
-      }
-      Some(count.toInt)
-    }
+    protected def retMany(values: Seq[U], individual: Seq[SingleInsertResult]) = Some(individual.filter(_ > -1).length)
 
     protected def retQuery(st: PreparedStatement, updateCount: Int) = updateCount
 
     protected def retOneInsertOrUpdate(st: PreparedStatement, value: U, updateCount: Int) = updateCount
     protected def retOneInsertOrUpdateFromInsert(st: PreparedStatement, value: U, rowId: Long) = if (rowId < 0) 0 else 1
-    protected def retOneInsertOrUpdateFromUpdate = 1
+    protected def retOneInsertOrUpdateFromUpdate(updateCount: Int) = updateCount
 
     def returning[RT, RU, C[_]](value: Query[RT, RU, C]) = createReturningInsertInvoker[U, RU](compiled, value.toNode)
   }
@@ -302,6 +290,6 @@ trait AndroidInsertInvokerComponent extends BasicInsertInvokerComponent{ driver:
     protected def retOneInsertOrUpdateFromInsert(st: PreparedStatement, value: U, rowId: Long): SingleInsertOrUpdateResult =
       if (rowId < 0) None else Some(keyConverter.read(IdReturnCursor(rowId)).asInstanceOf[RU])
 
-    protected def retOneInsertOrUpdateFromUpdate: SingleInsertOrUpdateResult = None
+    protected def retOneInsertOrUpdateFromUpdate(count: Int): SingleInsertOrUpdateResult = None
   }
 }
