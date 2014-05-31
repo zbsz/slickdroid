@@ -89,9 +89,9 @@ class AggregateSpec extends AndroidBackendSpec {
     val r4 = q4.run
     val r4t = r4: Seq[((Int, Option[Int]), Int)]
     println(r4)
-    ((1,Some(3)),1 shouldEqual Vector( ((1,Some(1)),1), ((1,Some(2)),1),
+    r4 shouldEqual Vector(((1,Some(1)),1), ((1,Some(2)),1), ((1,Some(3)),1),
       ((2,Some(1)),1), ((2,Some(2)),1), ((2,Some(5)),1),
-      ((3,Some(1)),1), ((3,Some(9)),1)), r4)
+      ((3,Some(1)),1), ((3,Some(9)),1))
 
     println("=========================================================== q5")
     val q5 = ts

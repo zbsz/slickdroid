@@ -1,6 +1,6 @@
 package scala.slick.android
 
-import android.database.sqlite.{SQLiteStatement, SQLiteDatabase, SQLiteOpenHelper}
+import android.database.sqlite._
 import scala.slick.backend.DatabaseComponent
 import scala.slick.SlickException
 import scala.slick.util.SlickLogger
@@ -45,13 +45,13 @@ trait AndroidBackend extends DatabaseComponent {
     def db: SQLiteDatabase
     def capabilities: DatabaseCapabilities
 
-    final def prepareStatement(sql: String): SQLiteStatement = {
+    final def prepareStatement(sql: String): PreparedStatement = {
       statementLogger.debug("Preparing statement: "+sql)
-      db.compileStatement(sql)
+      PreparedStatement(sql)(db)
     }
 
     /** A wrapper around the JDBC Connection's prepareStatement method, that automatically closes the statement. */
-    final def withPreparedStatement[T](sql: String)(f: (SQLiteStatement => T)): T = {
+    final def withPreparedStatement[T](sql: String)(f: (PreparedStatement => T)): T = {
       val st = prepareStatement(sql)
       try f(st) finally st.close()
     }

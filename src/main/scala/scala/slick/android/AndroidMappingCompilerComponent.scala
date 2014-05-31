@@ -4,7 +4,6 @@ import scala.slick.compiler.{CompilerState, CodeGen}
 import scala.slick.ast._
 import scala.slick.relational._
 import android.database.Cursor
-import android.database.sqlite.SQLiteStatement
 
 /** JDBC driver component which contains the mapping compiler and insert compiler */
 trait AndroidMappingCompilerComponent { driver: AndroidDriver =>
@@ -72,6 +71,6 @@ trait AndroidMappingCompilerComponent { driver: AndroidDriver =>
 
 trait AndroidResultConverterDomain extends ResultConverterDomain {
   type Reader = Cursor
-  type Writer = SQLiteStatement
+  type Writer = PreparedStatement
   type Updater = Unit // android sqlite doesn't support updates on cursor
 }

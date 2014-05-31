@@ -5,7 +5,6 @@ import scala.slick.relational._
 import scala.slick.SlickException
 import scala.slick.ast.{Dump, ScalaBaseType}
 import android.database.Cursor
-import android.database.sqlite.SQLiteStatement
 
 /** Factory methods for JdbcResultConverters which are manually specialized on
   * the underlying AndroidType. A generic implementation of this factory still
@@ -57,7 +56,7 @@ class BaseResultConverter[@specialized(Byte, Short, Int, Long, Char, Float, Doub
     ti.getValue(pr, idx - 1)
   }
   def update(value: T, pr: Updater) = throw new SlickException("update on cursor not supported")
-  def set(value: T, pp: SQLiteStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
+  def set(value: T, pp: PreparedStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
   override def info = super.info + "(" + Dump + ti + Dump + s", idx=$idx, name=$name)"
   def width = 1
 }
@@ -69,7 +68,7 @@ class OptionResultConverter[@specialized(Byte, Short, Int, Long, Char, Float, Do
     if(ti.isNull(pr, idx - 1)) None else Some(ti.getValue(pr, idx - 1))
   }
   def update(value: Option[T], pr: Updater) = throw new SlickException("update on cursor not supported")
-  def set(value: Option[T], pp: SQLiteStatement) = value match {
+  def set(value: Option[T], pp: PreparedStatement) = value match {
     case Some(v) => ti.setValue(v, pp, idx)
     case _ => ti.setNull(pp, idx)
   }
@@ -92,7 +91,7 @@ class DefaultingResultConverter[@specialized(Byte, Short, Int, Long, Char, Float
     if(ti.isNull(pr, idx - 1)) default() else ti.getValue(pr, idx - 1)
   }
   def update(value: T, pr: Updater) = throw new SlickException("update on cursor not supported")
-  def set(value: T, pp: SQLiteStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
+  def set(value: T, pp: PreparedStatement) = if (value == null) ti.setNull(pp, idx) else ti.setValue(value, pp, idx)
   override def info =
     super.info + "(" + Dump + ti + Dump + ", idx=" + idx + ", default=" +
       { try default() catch { case e: Throwable => "["+e.getClass.getName+"]" } } + ")"

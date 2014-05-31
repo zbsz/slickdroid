@@ -4,7 +4,7 @@ import scala.language.{higherKinds, existentials}
 import scala.slick.ast.{CompiledStatement, ResultSetMapping, Node, ParameterSwitch}
 import scala.slick.profile.BasicInvokerComponent
 import scala.slick.relational.{ResultConverter, CompiledMapping}
-import android.database.sqlite.SQLiteStatement
+import android.util.Log
 
 trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriver =>
 
@@ -29,12 +29,14 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
 
     /** Invoke the statement and return the raw results. */
     override def results(maxRows: Int)(implicit session: AndroidBackend#Session): Either[Int, PositionedResultIterator[R]] = {
-      val statement = getStatement
-      val st = session.prepareStatement(statement)
+      val st = session.prepareStatement(getStatement)
       setParam(st)
+      Log.d("QueryInvoker", s"results(maxRows: $maxRows), st: '$st'")
       var doClose = true
       try {
-        val pr = new PositionedResult(session.db.rawQuery(statement, Array())) {
+        val cursor = st.executeQuery()
+        Log.d("QueryInvoker", s"cursor count: ${cursor.getCount}")
+        val pr = new PositionedResult(cursor) {
           override def close() = {
             super.close()
             st.close()
@@ -49,7 +51,7 @@ trait AndroidInvokerComponent extends BasicInvokerComponent{ driver: AndroidDriv
     }
 
     protected def getStatement = sres.sql
-    protected def setParam(st: SQLiteStatement): Unit = sres.setter(st, 1, param)
+    protected def setParam(st: PreparedStatement): Unit = sres.setter(st, 1, param)
     protected def extractValue(pr: PositionedResult): R = converter.read(pr.rs)
     def invoker: this.type = this
   }

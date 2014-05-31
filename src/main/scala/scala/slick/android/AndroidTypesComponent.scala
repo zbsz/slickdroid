@@ -7,7 +7,6 @@ import scala.slick.ast._
 import scala.slick.profile.RelationalTypesComponent
 import scala.reflect.ClassTag
 import android.database.Cursor
-import android.database.sqlite.SQLiteStatement
 import javax.sql.rowset.serial.{SerialClob, SerialBlob}
 
 trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDriver =>
@@ -23,8 +22,8 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     def sqlType = newSqlType.getOrElse(tmd.sqlType)
     def sqlTypeName = newSqlTypeName.getOrElse(tmd.sqlTypeName)
-    def setValue(v: T, p: SQLiteStatement, idx: Int) = tmd.setValue(map(v), p, idx)
-    def setNull(p: SQLiteStatement, idx: Int): Unit = tmd.setNull(p, idx)
+    def setValue(v: T, p: PreparedStatement, idx: Int) = tmd.setValue(map(v), p, idx)
+    def setNull(p: PreparedStatement, idx: Int): Unit = tmd.setNull(p, idx)
     def getValue(r: Cursor, idx: Int) = {
       if (tmd.isNull(r, idx)) null.asInstanceOf[T]
       else {
@@ -84,7 +83,7 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
       else throw new SlickException(sqlTypeName + " does not have a literal representation")
     def hasLiteralForm = true
     def isNull(r: Cursor, idx: Int) = r.isNull(idx)
-    def setNull(p: SQLiteStatement, idx: Int): Unit = p.bindNull(idx)
+    def setNull(p: PreparedStatement, idx: Int): Unit = p.bindNull(idx)
   }
 
   class JdbcTypes {
@@ -109,7 +108,7 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class BooleanAndroidType extends DriverAndroidType[Boolean] {
       def sqlType = java.sql.Types.BOOLEAN
-      def setValue(v: Boolean, p: SQLiteStatement, idx: Int) = p.bindLong(idx, if (v) 1 else 0)
+      def setValue(v: Boolean, p: PreparedStatement, idx: Int) = p.bindLong(idx, if (v) 1 else 0)
       def getValue(r: Cursor, idx: Int) = r.getInt(idx) == 1
       override def sqlTypeName = "INTEGER"
       override def valueToSQLLiteral(value: Boolean) = if(value) "1" else "0"
@@ -117,27 +116,27 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class BlobAndroidType extends DriverAndroidType[Blob] {
       def sqlType = java.sql.Types.BLOB
-      def setValue(v: Blob, p: SQLiteStatement, idx: Int) = p.bindBlob(idx, v.getBytes(0, v.length().toInt))
+      def setValue(v: Blob, p: PreparedStatement, idx: Int) = p.bindBlob(idx, v.getBytes(0, v.length().toInt))
       def getValue(r: Cursor, idx: Int) = new SerialBlob(r.getBlob(idx))
       override def hasLiteralForm = false
     }
 
     class ByteAndroidType extends DriverAndroidType[Byte] with NumericTypedType {
       def sqlType = java.sql.Types.TINYINT
-      def setValue(v: Byte, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v)
+      def setValue(v: Byte, p: PreparedStatement, idx: Int) = p.bindLong(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getInt(idx).toByte
     }
 
     class ByteArrayAndroidType extends DriverAndroidType[Array[Byte]] {
       def sqlType = java.sql.Types.BLOB
-      def setValue(v: Array[Byte], p: SQLiteStatement, idx: Int) = p.bindBlob(idx, v)
+      def setValue(v: Array[Byte], p: PreparedStatement, idx: Int) = p.bindBlob(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getBlob(idx)
       override def hasLiteralForm = false
     }
 
     class ClobAndroidType extends DriverAndroidType[Clob] {
       def sqlType = java.sql.Types.CLOB
-      def setValue(v: Clob, p: SQLiteStatement, idx: Int) = p.bindString(idx, v.getSubString(0, v.length().toInt))
+      def setValue(v: Clob, p: PreparedStatement, idx: Int) = p.bindString(idx, v.getSubString(0, v.length().toInt))
       def getValue(r: Cursor, idx: Int) = new SerialClob(r.getString(idx).toCharArray)
       override def hasLiteralForm = false
     }
@@ -145,7 +144,7 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
     class CharAndroidType extends DriverAndroidType[Char] {
       def sqlType = java.sql.Types.CHAR
       override def sqlTypeName = "CHAR(1)"
-      def setValue(v: Char, p: SQLiteStatement, idx: Int) = stringJdbcType.setValue(String.valueOf(v), p, idx)
+      def setValue(v: Char, p: PreparedStatement, idx: Int) = stringJdbcType.setValue(String.valueOf(v), p, idx)
       def getValue(r: Cursor, idx: Int) = {
         val s = stringJdbcType.getValue(r, idx)
         if(s == null || s.isEmpty) ' ' else s.charAt(0)
@@ -155,44 +154,44 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class DateAndroidType extends DriverAndroidType[Date] {
       def sqlType = java.sql.Types.DATE
-      def setValue(v: Date, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v.getTime)
+      def setValue(v: Date, p: PreparedStatement, idx: Int) = p.bindLong(idx, v.getTime)
       def getValue(r: Cursor, idx: Int) = new Date(r.getLong(idx))
       override def valueToSQLLiteral(value: Date) = value.getTime.toString
     }
 
     class DoubleAndroidType extends DriverAndroidType[Double] with NumericTypedType {
       def sqlType = java.sql.Types.DOUBLE
-      def setValue(v: Double, p: SQLiteStatement, idx: Int) = p.bindDouble(idx, v)
+      def setValue(v: Double, p: PreparedStatement, idx: Int) = p.bindDouble(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getDouble(idx)
     }
 
     class FloatAndroidType extends DriverAndroidType[Float] with NumericTypedType {
       def sqlType = java.sql.Types.FLOAT
-      def setValue(v: Float, p: SQLiteStatement, idx: Int) = p.bindDouble(idx, v)
+      def setValue(v: Float, p: PreparedStatement, idx: Int) = p.bindDouble(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getFloat(idx)
     }
 
     class IntAndroidType extends DriverAndroidType[Int] with NumericTypedType {
       def sqlType = java.sql.Types.INTEGER
-      def setValue(v: Int, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v)
+      def setValue(v: Int, p: PreparedStatement, idx: Int) = p.bindLong(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getInt(idx)
     }
 
     class LongAndroidType extends DriverAndroidType[Long] with NumericTypedType {
       def sqlType = java.sql.Types.BIGINT
-      def setValue(v: Long, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v)
+      def setValue(v: Long, p: PreparedStatement, idx: Int) = p.bindLong(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getLong(idx)
     }
 
     class ShortAndroidType extends DriverAndroidType[Short] with NumericTypedType {
       def sqlType = java.sql.Types.SMALLINT
-      def setValue(v: Short, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v)
+      def setValue(v: Short, p: PreparedStatement, idx: Int) = p.bindLong(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getShort(idx)
     }
 
     class StringAndroidType extends DriverAndroidType[String] {
       def sqlType = java.sql.Types.VARCHAR
-      def setValue(v: String, p: SQLiteStatement, idx: Int) = p.bindString(idx, v)
+      def setValue(v: String, p: PreparedStatement, idx: Int) = p.bindString(idx, v)
       def getValue(r: Cursor, idx: Int) = r.getString(idx)
       override def valueToSQLLiteral(value: String) = if(value eq null) "NULL" else {
         val sb = new StringBuilder
@@ -208,21 +207,21 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class TimeAndroidType extends DriverAndroidType[Time] {
       def sqlType = java.sql.Types.TIME
-      def setValue(v: Time, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v.getTime)
+      def setValue(v: Time, p: PreparedStatement, idx: Int) = p.bindLong(idx, v.getTime)
       def getValue(r: Cursor, idx: Int) = new Time(r.getLong(idx))
       override def valueToSQLLiteral(value: Time) = value.getTime.toString
     }
 
     class TimestampAndroidType extends DriverAndroidType[Timestamp] {
       def sqlType = java.sql.Types.TIMESTAMP
-      def setValue(v: Timestamp, p: SQLiteStatement, idx: Int) = p.bindLong(idx, v.getTime)
+      def setValue(v: Timestamp, p: PreparedStatement, idx: Int) = p.bindLong(idx, v.getTime)
       def getValue(r: Cursor, idx: Int) = new Timestamp(r.getLong(idx))
       override def valueToSQLLiteral(value: Timestamp) = value.getTime.toString
     }
 
     class UUIDSQLiteType extends DriverAndroidType[UUID] {
       def sqlType = java.sql.Types.BLOB
-      def setValue(v: UUID, p: SQLiteStatement, idx: Int) = p.bindBlob(idx, toBytes(v))
+      def setValue(v: UUID, p: PreparedStatement, idx: Int) = p.bindBlob(idx, toBytes(v))
       def getValue(r: Cursor, idx: Int) = fromBytes(r.getBlob(idx))
       override def hasLiteralForm = false
       def toBytes(uuid: UUID) = if(uuid eq null) null else {
@@ -255,7 +254,7 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class BigDecimalAndroidType extends DriverAndroidType[BigDecimal] with NumericTypedType {
       def sqlType = java.sql.Types.DECIMAL
-      def setValue(v: BigDecimal, p: SQLiteStatement, idx: Int) = p.bindString(idx, v.bigDecimal.toPlainString)
+      def setValue(v: BigDecimal, p: PreparedStatement, idx: Int) = p.bindString(idx, v.bigDecimal.toPlainString)
       def getValue(r: Cursor, idx: Int) = {
         val v = r.getString(idx)
         if(v eq null) null else BigDecimal(v)
@@ -264,8 +263,8 @@ trait AndroidTypesComponent extends RelationalTypesComponent { driver: AndroidDr
 
     class NullAndroidType extends DriverAndroidType[Null] {
       def sqlType = java.sql.Types.NULL
-      def setValue(v: Null, p: SQLiteStatement, idx: Int) = p.bindNull(idx)
-      override def setNull(p: SQLiteStatement, idx: Int) = p.bindNull(idx)
+      def setValue(v: Null, p: PreparedStatement, idx: Int) = p.bindNull(idx)
+      override def setNull(p: PreparedStatement, idx: Int) = p.bindNull(idx)
       def getValue(r: Cursor, idx: Int) = null
       override def valueToSQLLiteral(value: Null) = "NULL"
     }

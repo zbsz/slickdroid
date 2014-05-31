@@ -1,13 +1,12 @@
 package scala.slick.android
 
 import scala.slick.util.CloseableIterator
-import android.database.sqlite.SQLiteStatement
 
 /** An invoker which executes an SQL statement through JDBC. */
 abstract class StatementInvoker[+R] extends Invoker[R] { self =>
 
   protected def getStatement: String
-  protected def setParam(st: SQLiteStatement): Unit
+  protected def setParam(st: PreparedStatement): Unit
 
   def iteratorTo(maxRows: Int)(implicit session: AndroidBackend#Session): CloseableIterator[R] =
     results(maxRows).fold(r => new CloseableIterator.Single[R](r.asInstanceOf[R]), identity)

@@ -1,7 +1,6 @@
 package scala.slick.android
 
 import scala.slick.ast.BaseTypedType
-import android.database.sqlite.SQLiteStatement
 import android.database.Cursor
 
 /** A JdbcType object represents a Scala type that can be
@@ -14,11 +13,11 @@ trait AndroidType[@specialized(Byte, Short, Int, Long, Char, Float, Double, Bool
   /** The default name for the SQL type that is used for column declarations. */
   def sqlTypeName: String
   /** Set a parameter of the type. */
-  def setValue(v: T, p: SQLiteStatement, idx: Int): Unit
+  def setValue(v: T, p: PreparedStatement, idx: Int): Unit
   /** Set a parameter of the type to NULL. */
-  def setNull(p: SQLiteStatement, idx: Int): Unit
+  def setNull(p: PreparedStatement, idx: Int): Unit
   /** Set an Option parameter of the type. */
-  final def setOption(v: Option[T], p: SQLiteStatement, idx: Int): Unit = v match {
+  final def setOption(v: Option[T], p: PreparedStatement, idx: Int): Unit = v match {
     case Some(v) => setValue(v, p, idx)
     case None => setNull(p, idx)
   }

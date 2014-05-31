@@ -1,7 +1,6 @@
 package scala.slick.android
 
 import scala.collection.mutable.ArrayBuffer
-import android.database.sqlite.SQLiteStatement
 
 final class SQLBuilder extends SQLBuilder.Segment { self =>
   import SQLBuilder._
@@ -61,14 +60,14 @@ final class SQLBuilder extends SQLBuilder.Segment { self =>
 }
 
 object SQLBuilder {
-  final type Setter = ((SQLiteStatement, Int, Any) => Unit)
+  final type Setter = ((PreparedStatement, Int, Any) => Unit)
 
-  val EmptySetter: Setter = (_: SQLiteStatement, _: Int, _: Any) => ()
+  val EmptySetter: Setter = (_: PreparedStatement, _: Int, _: Any) => ()
 
   final case class Result(sql: String, setter: Setter)
 
   private class CombinedSetter(children: Seq[Setter]) extends Setter {
-    def apply(p: SQLiteStatement, idx: Int, param: Any): Unit = {
+    def apply(p: PreparedStatement, idx: Int, param: Any): Unit = {
       var i = idx
       for(s <- children) {
         s(p, i, param)
