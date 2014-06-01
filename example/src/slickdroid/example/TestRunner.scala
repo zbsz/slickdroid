@@ -35,18 +35,18 @@ object TestRunner {
     val specs = List(
       new SampleSpec(),
       new MainSpec(),
-//      new InvokerSpec(),
+      new InvokerSpec(),
       new ExecutorSpec(),
       new PrimaryKeySpec(),
       new ColumnDefaultSpec(),
       new InsertSpec(),
       new CountSpec(),
-//      new ForeignKeySpec(),
+      new ForeignKeySpec(),
       new JoinSpec(),
       new MapperSpec(),
       new TransactionSpec(),
       new UnionSpec(),
-//      new AggregateSpec(),
+      new AggregateSpec(),
       new ScalarFunctionsSpec(),
       new RelationalTypeSpec(),
       new NestingSpec(),
@@ -54,8 +54,8 @@ object TestRunner {
       new IterateeSpec(),
       new TemplateSpec(),
       new NewQuerySemanticsSpec(),
-      new NullabilitySpec()
-//      new PlainSQLSpec()
+      new NullabilitySpec(),
+      new PlainSQLSpec()
     )
 
     val suites = specs.map(spec => Suite(spec.suiteName))
