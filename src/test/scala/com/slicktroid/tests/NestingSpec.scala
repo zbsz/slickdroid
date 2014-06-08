@@ -1,11 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class NestingSpec extends AndroidBackendSpec {
-
+class NestingSpec extends SlickDroidSpec {
   import TupleMethods._
 
   scenario("testNestedTuples") {

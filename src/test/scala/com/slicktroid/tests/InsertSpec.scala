@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class InsertSpec extends AndroidBackendSpec {
+class InsertSpec extends SlickDroidSpec {
 
   scenario("simple insert") {
 

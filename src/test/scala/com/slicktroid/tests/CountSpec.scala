@@ -1,9 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
+
 /**
   */
-class CountSpec extends AndroidBackendSpec {
+class CountSpec extends SlickDroidSpec {
 
   scenario("testCount") {
     class TestTable(tag: Tag) extends Table[Int](tag, "TEST") {

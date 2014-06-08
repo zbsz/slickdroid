@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class PrimaryKeySpec extends AndroidBackendSpec {
+class PrimaryKeySpec extends SlickDroidSpec {
 
   scenario("testPrimaryKey") {
 

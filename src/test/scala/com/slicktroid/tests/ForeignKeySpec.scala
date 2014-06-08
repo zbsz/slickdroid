@@ -1,9 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
+
 /**
   */
-class ForeignKeySpec extends AndroidBackendSpec {
+class ForeignKeySpec extends SlickDroidSpec {
 
   scenario("testSimple") {
     class Categories(tag: Tag) extends Table[(Int, String)](tag, "categories") {

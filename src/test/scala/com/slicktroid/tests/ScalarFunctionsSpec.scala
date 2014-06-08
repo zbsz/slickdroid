@@ -1,4 +1,4 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 import java.sql.{Timestamp, Time, Date}
@@ -7,7 +7,7 @@ import scala.slick.lifted.ColumnBase
 
 /**
   */
-class ScalarFunctionsSpec extends AndroidBackendSpec {
+class ScalarFunctionsSpec extends SlickDroidSpec {
   scenario("testScalarFunc") {
     def check[T](q: ColumnBase[T], exp: T) = q.run shouldEqual exp
     def checkLit[T : ColumnType](v: T) = check(LiteralColumn(v), v)

@@ -1,10 +1,9 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.jdbc.{StaticQuery => Q, GetResult}
 import Q.interpolation
-import scala.slick.android.SlickDroidDriver.simple._
 
-class PlainSQLSpec extends AndroidBackendSpec {
+class PlainSQLSpec extends SlickDroidSpec {
 
   case class User(id:Int, name:String)
 

@@ -1,11 +1,11 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 import scala.Some
 
 /**
   */
-class TransactionSpec extends AndroidBackendSpec {
+class TransactionSpec extends SlickDroidSpec {
   
   scenario("testTransaction") {
 

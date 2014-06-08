@@ -1,11 +1,11 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 import scala.slick.ast.NumericTypedType
 
 /**
   */
-class RelationalTypeSpec extends AndroidBackendSpec {
+class RelationalTypeSpec extends SlickDroidSpec {
 
   scenario("testNumeric") {
     def testStore[T](values: T*)(implicit tm: BaseColumnType[T] with NumericTypedType) {

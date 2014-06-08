@@ -1,4 +1,4 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.collection.mutable.ArrayBuffer
 import scala.slick.util.CloseableIterator
@@ -6,7 +6,7 @@ import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class InvokerSpec extends AndroidBackendSpec {
+class InvokerSpec extends SlickDroidSpec {
 
   scenario("testCollections") {
     class T(tag: Tag) extends Table[Int](tag, "t") {

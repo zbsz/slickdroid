@@ -71,11 +71,17 @@ object TestRunner {
 
 import TestRunner._
 
-case class Test(name: String, suite: Suite, var state: Int = StateUnknown)
+case class Test(name: String, suite: Suite, var state: Int = StateUnknown) {
+  override def toString: String = s"Test($name, ${suite.name}, $state)"
+}
 
-case class Suite(name: String, var state: Int = StateUnknown, var tests: List[Test] = Nil, var runner: Option[SuiteRunner] = None)
+case class Suite(name: String, var state: Int = StateUnknown, var tests: List[Test] = Nil, var runner: Option[SuiteRunner] = None) {
+  override def toString: String = s"Suite($name, $state, ${tests.map(_.name)}"
+}
 
 class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAdapter) extends Reporter {
+
+  Log.d("SuiteRunner", s"init")
 
   suite.runner = Some(this)
 
@@ -86,6 +92,8 @@ class SuiteRunner(suite: Suite, spec: AndroidBackendSpec, adapter: TestResultsAd
   start()
 
   def start(testName: Option[String] = None): Unit = {
+    Log.d("SuiteRunner", s"start $suite,  $testName")
+
     if (!running) {
       running = true
       failed = false

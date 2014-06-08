@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class TemplateSpec extends AndroidBackendSpec {
+class TemplateSpec extends SlickDroidSpec {
 
   scenario("testParameters") {
     class Users(tag: Tag) extends Table[(Int, String)](tag, "users") {

@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class SampleSpec extends AndroidBackendSpec {
+class SampleSpec extends SlickDroidSpec {
 
   // Case classes for our data
 //  case class Supplier(id: Int, name: String, street: String, city: String, state: String, zip: String)

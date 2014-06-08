@@ -1,14 +1,14 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
-import scala.slick.android.SlickDroidDriver.simple._
-import org.scalatest.{Matchers, FeatureSpec, BeforeAndAfter}
+import org.scalatest._
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
 import java.util.UUID
-import slickdroid.example.TestRunner
+import scala.slick.android.SlickDroidDriver.simple._
+import org.robolectric.Robolectric
 
 /**
   */
-class AndroidBackendSpec extends FeatureSpec with Matchers with BeforeAndAfter {
+trait SlickDroidSpec extends FeatureSpec with Matchers with BeforeAndAfter with RobolectricSuite {
 
   val dbName = UUID.randomUUID().toString
 
@@ -18,19 +18,24 @@ class AndroidBackendSpec extends FeatureSpec with Matchers with BeforeAndAfter {
   implicit var session: Session = null
 
   before {
-    dbHelper = new SQLiteOpenHelper(TestRunner.context, dbName, null, 1) {
+    dbHelper = new SQLiteOpenHelper(Robolectric.application, dbName, null, 1) {
       override def onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int): Unit = {}
       override def onCreate(db: SQLiteDatabase): Unit = {}
     }
-    db = SlickDatabase(dbHelper)
+    db = Database(dbHelper)
     session = db.createSession()
-    session should not be(null)
+    session should not be null
   }
 
   after {
     session.close()
     dbHelper.close()
-    TestRunner.context.getDatabasePath(dbName).delete()
+    Robolectric.application.getDatabasePath(dbName).delete()
+  }
+
+  override def useInstrumentation(name: String): Option[Boolean] = {
+    if (name.startsWith("scala.slick")) Some(true)
+    else super.useInstrumentation(name)
   }
 
   def assertTablesExist(tables: String*)(implicit session: Session) {

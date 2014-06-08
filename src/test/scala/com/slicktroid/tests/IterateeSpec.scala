@@ -1,4 +1,4 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 import scala.slick.util.iter._
@@ -7,7 +7,7 @@ import scala.slick.util.iter.El
 
 /**
   */
-class IterateeSpec extends AndroidBackendSpec {
+class IterateeSpec extends SlickDroidSpec {
 
   class A(tag: Tag) extends Table[(String, Int)](tag, "a") {
     def s = column[String]("s", O.PrimaryKey)

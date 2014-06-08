@@ -1,8 +1,8 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
-class ExecutorSpec extends AndroidBackendSpec {
+class ExecutorSpec extends SlickDroidSpec {
 
   scenario("testExecutor") {
     class T(tag: Tag) extends Table[Int](tag, "t_exe") {

@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class NullabilitySpec extends AndroidBackendSpec {
+class NullabilitySpec extends SlickDroidSpec {
 
   scenario("testNullability") {
     class T1(tag: Tag) extends Table[String](tag, "t1") {

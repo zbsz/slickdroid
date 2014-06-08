@@ -1,11 +1,11 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.util.control.NonFatal
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class JoinSpec extends AndroidBackendSpec {
+class JoinSpec extends SlickDroidSpec {
 
   scenario("testJoin") {
     class Categories(tag: Tag) extends Table[(Int, String)](tag, "cat_j") {

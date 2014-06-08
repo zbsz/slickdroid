@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class PagingSpec extends AndroidBackendSpec {
+class PagingSpec extends SlickDroidSpec {
 
   class IDs(tag: Tag, name: String) extends Table[Int](tag, name) {
     def id = column[Int]("id", O.PrimaryKey)

@@ -1,11 +1,12 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.Some
 import scala.slick.android.SlickDroidDriver.simple._
+import language.higherKinds
 
 /**
   */
-class MainSpec extends AndroidBackendSpec { mainTest =>
+class MainSpec extends SlickDroidSpec { mainTest =>
 
   case class User(id: Int, first: String, last: String)
 

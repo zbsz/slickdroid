@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class UnionSpec extends AndroidBackendSpec {
+class UnionSpec extends SlickDroidSpec {
 
   class Managers(tag: Tag) extends Table[(Int, String, String)](tag, "managers") {
     def id = column[Int]("id")

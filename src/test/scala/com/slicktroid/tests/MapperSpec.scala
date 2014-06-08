@@ -1,11 +1,11 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.reflect.ClassTag
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class MapperSpec extends AndroidBackendSpec {
+class MapperSpec extends SlickDroidSpec {
   import TupleMethods._
 
   scenario("testMappedEntity") {

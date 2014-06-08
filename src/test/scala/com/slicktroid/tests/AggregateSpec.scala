@@ -1,10 +1,10 @@
-package slickdroid.example.tests
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
 
 /**
   */
-class AggregateSpec extends AndroidBackendSpec {
+class AggregateSpec extends SlickDroidSpec {
 
   scenario("testAggregates") {
     class T(tag: Tag) extends Table[(Int, Option[Int])](tag, "t2") {

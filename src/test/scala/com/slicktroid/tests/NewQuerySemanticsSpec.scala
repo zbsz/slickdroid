@@ -1,11 +1,12 @@
-package slickdroid.example.tests
-
+package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
+import language.higherKinds
 
 /**
   */
-class NewQuerySemanticsSpec extends AndroidBackendSpec {
+class NewQuerySemanticsSpec extends SlickDroidSpec {
+  import TupleMethods._
 
   val doRun = true
 
@@ -388,7 +389,6 @@ class NewQuerySemanticsSpec extends AndroidBackendSpec {
   }
 
   scenario("testOldComposition") {
-    import TupleMethods._
 
     class Users(tag: Tag) extends Table[(Int, String, String)](tag, "users") {
       def id = column[Int]("id")
