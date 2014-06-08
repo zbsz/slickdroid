@@ -11,9 +11,11 @@ import java.util.Properties
   */
 class SlickDroidConnection(val db: SQLiteDatabase) extends java.sql.Connection {
 
+  private var autoCommit = true
+
   override def createStatement(): Statement = ???
 
-  override def setAutoCommit(p1: Boolean): Unit = ???
+  override def setAutoCommit(p1: Boolean): Unit = autoCommit = p1
 
   override def setHoldability(p1: Int): Unit = ???
 
@@ -436,7 +438,7 @@ class SlickDroidConnection(val db: SQLiteDatabase) extends java.sql.Connection {
 
   override def close(): Unit = db.close()
 
-  override def getAutoCommit: Boolean = true //TODO
+  override def getAutoCommit: Boolean = autoCommit
 
   override def abort(p1: Executor): Unit = ???
 

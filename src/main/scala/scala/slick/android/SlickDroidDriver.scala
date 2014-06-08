@@ -3,14 +3,11 @@ package scala.slick.android
 import scala.slick.driver.SQLiteDriver
 import scala.slick.jdbc.JdbcBackend
 import android.database.sqlite.SQLiteOpenHelper
-import java.sql.{Driver, Connection}
-import java.util.Properties
-import javax.sql.DataSource
+import java.sql.Connection
 
 
 trait SlickDroidBackend extends JdbcBackend {
-  val SlickDroidDatabase = new DatabaseFactoryDef {}
-  override val Database = SlickDroidDatabase
+  override val Database = new DatabaseFactoryDef {}
   override val backend = this
 
   trait SlickDroidDatabaseDef extends super.DatabaseDef {
@@ -29,6 +26,7 @@ trait SlickDroidBackend extends JdbcBackend {
     val db = conn.asInstanceOf[SlickDroidConnection].db
 
     override def withTransaction[T](f: => T): T = if(inTransaction) f else {
+      conn.setAutoCommit(false)
       inTransaction = true
       db.beginTransaction()
       try {
@@ -39,6 +37,7 @@ trait SlickDroidBackend extends JdbcBackend {
       } finally {
         db.endTransaction()
         inTransaction = false
+        conn.setAutoCommit(true)
       }
     }
   }
@@ -48,14 +47,13 @@ object SlickDroidBackend extends SlickDroidBackend
 
 /**
   */
-trait SlickDroidDriver extends SQLiteDriver { driver =>
+object SlickDroidDriver extends {
+  override val backend = SlickDroidBackend // early initializer, BasicProfile uses backend in constructor
+} with SQLiteDriver { driver =>
 
-//  override val backend = SlickDroidBackend
-  override val simple = new SimpleQL()
+  override val simple = new SimpleQL {}
 
-  class SimpleQL extends super.SimpleQL {
-    val SlickDatabase = SlickDroidBackend.SlickDroidDatabase
+  trait SimpleQL extends super.SimpleQL {
+    override val Database = backend.Database
   }
 }
-
-object SlickDroidDriver extends SlickDroidDriver

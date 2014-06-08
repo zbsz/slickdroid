@@ -1,6 +1,7 @@
 package com.slicktroid.tests
 
 import scala.slick.android.SlickDroidDriver.simple._
+import language.higherKinds
 
 /**
   */

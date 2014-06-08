@@ -10,7 +10,7 @@ scalaVersion := "2.11.0"
 
 crossScalaVersions ++= Seq("2.10.0")
 
-scalacOptions ++= Seq("-feature")
+scalacOptions ++= Seq("-feature", "-deprecation")
 
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 

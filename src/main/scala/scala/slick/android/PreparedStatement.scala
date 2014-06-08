@@ -14,6 +14,7 @@ case class PreparedStatement(sql: String, generatedKeyName: String = "")(implici
   var maxRows = 0
   var result: ResultSet = null
   var rowId = 0L
+  var updateCount = 0
 
   val stmt = db.compileStatement(sql)
   var bindings = Map[Int, String]()
@@ -60,22 +61,33 @@ case class PreparedStatement(sql: String, generatedKeyName: String = "")(implici
 
   override def execute(): Boolean = {
     val key = sql.trim.toLowerCase
-
     if (key.startsWith("select")) {
       result = executeQuery()
       true
     } else if (key.startsWith("insert")) {
       rowId = executeInsert()
+      updateCount = if (rowId < 0) 0 else 1
+      false
+    } else if (key.startsWith("update") || key.startsWith("delete")) {
+      updateCount = executeUpdateDelete()
       false
     } else {
-      rowId = executeUpdateDelete()
+      stmt.execute()
       false
     }
   }
 
   override def executeQuery(): ResultSet = new CursorResultSet(db.rawQuery(sql, bindings.toArray.sortBy(_._1).map(_._2)))
 
-  override def executeUpdate(): Int = executeUpdateDelete()
+  override def executeUpdate(): Int = {
+    if (generatedKeyName != "") {
+      rowId = executeInsert()
+      updateCount = if(rowId < 0) 0 else 1
+    } else {
+      updateCount = executeUpdateDelete()
+    }
+    updateCount
+  }
 
   override def setByte(p1: Int, p2: Byte): Unit = bindLong(p1, p2)
 
@@ -203,7 +215,7 @@ case class PreparedStatement(sql: String, generatedKeyName: String = "")(implici
 
   override def setCursorName(p1: String): Unit = ???
 
-  override def getUpdateCount: Int = rowId.toInt
+  override def getUpdateCount: Int = updateCount
 
   override def addBatch(p1: String): Unit = ???
 

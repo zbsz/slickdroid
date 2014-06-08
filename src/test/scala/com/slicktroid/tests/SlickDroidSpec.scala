@@ -22,7 +22,7 @@ trait SlickDroidSpec extends FeatureSpec with Matchers with BeforeAndAfter with 
       override def onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int): Unit = {}
       override def onCreate(db: SQLiteDatabase): Unit = {}
     }
-    db = SlickDatabase(dbHelper)
+    db = Database(dbHelper)
     session = db.createSession()
     session should not be null
   }
