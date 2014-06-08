@@ -436,7 +436,7 @@ class SlickDroidConnection(val db: SQLiteDatabase) extends java.sql.Connection {
 
   override def close(): Unit = db.close()
 
-  override def getAutoCommit: Boolean = ???
+  override def getAutoCommit: Boolean = true //TODO
 
   override def abort(p1: Executor): Unit = ???
 

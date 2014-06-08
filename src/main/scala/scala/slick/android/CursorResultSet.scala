@@ -8,6 +8,7 @@ import scala.Array
 import java.{sql, util}
 import java.math.BigDecimal
 import java.net.URL
+import language.implicitConversions
 
 /**
   */
