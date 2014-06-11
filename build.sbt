@@ -14,15 +14,15 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 
-resolvers += "reactive-couch releases" at "https://raw.github.com/zbsz/mvn-repo/master/releases/"
+resolvers += "robotest releases" at "https://raw.github.com/zbsz/mvn-repo/master/releases/"
 
-resolvers += "reactive-couch snapshots" at "https://raw.github.com/zbsz/mvn-repo/master/snapshots/"
+resolvers += "robotest snapshots" at "https://raw.github.com/zbsz/mvn-repo/master/snapshots/"
 
 libraryDependencies ++= Seq(
   "org.robolectric" % "android-all" % "4.3_r2-robolectric-0" % "provided",
   "org.slf4j" % "slf4j-android" % "1.7.7",
   "junit" % "junit" % "4.8.2" % "test",
-  "com.geteit" %% "robotest" % "0.4" % "test",
+  "com.geteit" %% "robotest" % "0.5" % "test",
   "org.scalatest" %% "scalatest" % "2.1.6" % "test",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2" % "test"
 )

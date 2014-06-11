@@ -10,6 +10,14 @@
         <uses-library android:name="scalatest-2.11"/>
         <uses-library android:name="scala_xml-2.11"/>
 
+        <activity android:name="slickdroid.example.BenchmarkActivity"
+                  android:label="SlickDroid Benchmark">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
         <activity android:name="slickdroid.example.MainActivity"
                   android:label="SlickDroid Jdbc">
             <intent-filter>
@@ -17,5 +25,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
     </application>
 </manifest>
